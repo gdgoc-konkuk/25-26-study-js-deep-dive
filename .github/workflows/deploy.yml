@@ -1,0 +1,90 @@
+# 워크플로우 이름
+name: Deploy to GitHub Pages
+
+# 언제 이 워크플로우를 실행할지 정의
+on:
+  push:
+    branches:
+      - main # main 브랜치에 푸시될 때 실행
+
+# GitHub Pages 배포를 위한 권한 설정
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시 배포를 방지하고, 이전 배포가 완료될 때까지 대기
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # 빌드 잡
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 소스 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      # 2. Node.js 환경 설정
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      # 3. pnpm 설치
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9 # 안정적인 버전으로 명시 (e.g., 9)
+
+      # 4. pnpm 캐시 디렉토리 경로 가져오기
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      # 5. pnpm 의존성 캐시 설정
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      # 6. 의존성 설치 (캐시가 있으면 매우 빠르게 실행됨)
+      - name: Install dependencies
+        run: pnpm install
+      
+      # 7. 프로젝트 빌드 (Next.js 정적 export)
+      - name: Build
+        run: pnpm build
+      
+      # 8. GitHub Pages 배포 준비
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      # 9. 빌드 결과물(artifact) 업로드
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Next.js export 결과물 경로
+          path: ./out
+  
+  # 배포 잡
+  deploy:
+    # GitHub Pages 배포 환경 설정
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # 빌드 잡이 성공해야 실행됨
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # 업로드된 artifact를 GitHub Pages에 배포
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
