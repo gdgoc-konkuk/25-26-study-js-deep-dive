@@ -1,6 +1,6 @@
-import { Footer, Layout, Navbar } from "nextra-theme-docs";
-import { getPageMap } from "nextra/page-map";
-import "nextra-theme-docs/style.css";
+import { Footer, Layout, Navbar } from 'nextra-theme-docs';
+import { getPageMap } from 'nextra/page-map';
+import 'nextra-theme-docs/style.css';
 
 export const metadata = {
   // Define your metadata here
