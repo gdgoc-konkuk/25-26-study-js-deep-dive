@@ -7,38 +7,26 @@
 아래 자바스크립트 코드를 실행하다고 생각해보자.
 
 ```jsx
-10 + 20
+10 + 20;
 ```
 
 1. **사람**이 계산하는 방법
-    - 10, 20, +의 의미를 해석할 수 있어야 한다.
-    - 10, 20을 먼저 두뇌에 기억한다.
-    - 10과 20을 더한 결과인 30을 두뇌에 기억한다.
+   - 10, 20, +의 의미를 해석할 수 있어야 한다.
+   - 10, 20을 먼저 두뇌에 기억한다.
+   - 10과 20을 더한 결과인 30을 두뇌에 기억한다.
 2. **컴퓨터**가 계산하는 방법 : cpu가 연산하고, memory가 기억한다.
-    - 10과 20을 메모리에서 기억한다
-        
-        **⇒ 메모리란?**
-        
-        데이터를 저장할 수 있는 메모리 셀의 집합체
-        
-        ![image.png](ch4_a1.png)
-        
-        - 메모리 셀 한개의 크기 : 1byte(8bit)
-            
-            ⇒ 컴퓨터는 모든 데이터를 **2진수 형태**로 저장한다.
-            
-        - 메모리 셀마다 고유의 주소가 존재
-            
-            ⇒ 컴퓨터는 메모리 셀 단위로 데이터를 저장(write) 하거나 읽는다(read).
-            
-        
-    - cpu에서 10과 20을 더하는 연산을 수행한다.
-    - 연산한 결과인 30을 메모리에서 기억한다.
-        
-        ![또다른 메모리 셀에 30이 저장된다](ch4_a2.png)
-        
-        또다른 메모리 셀에 30이 저장된다
-        
+   - 10과 20을 메모리에서 기억한다
+     **⇒ 메모리란?**
+     데이터를 저장할 수 있는 메모리 셀의 집합체
+     ![image.png](/images/ch04/ch4_a1.png)
+     - 메모리 셀 한개의 크기 : 1byte(8bit)
+       ⇒ 컴퓨터는 모든 데이터를 **2진수 형태**로 저장한다.
+     - 메모리 셀마다 고유의 주소가 존재
+       ⇒ 컴퓨터는 메모리 셀 단위로 데이터를 저장(write) 하거나 읽는다(read).
+   - cpu에서 10과 20을 더하는 연산을 수행한다.
+   - 연산한 결과인 30을 메모리에서 기억한다.
+     ![또다른 메모리 셀에 30이 저장된다](/images/ch04/ch4_a2.png)
+     또다른 메모리 셀에 30이 저장된다
 
 그런데, JS에서는 연산 결과인 30을 재사용하기 위해 **메모리 셀에 직접 접근할 수 없다.**
 
@@ -61,23 +49,15 @@ var result = 10 + 20;
 ```
 
 - 변수명 : 변수 이름
-    
-    ex) `result`
-    
+  ex) `result`
 - 변수값 : 변수에 저장된 값
-    
-    ex) 30
-    
+  ex) 30
 - 변수 할당 : write
-    
-    ex) `result`에 30을 저장
-    
+  ex) `result`에 30을 저장
 - 변수 참조 : read
-    
-    ex) `result`에 저장된 30이라는 값을 읽음
-    
+  ex) `result`에 저장된 30이라는 값을 읽음
 
-![image.png](ch4_a3.png)
+![image.png](/images/ch04/ch4_a3.png)
 
 ## 4-2. 식별자
 
@@ -87,7 +67,7 @@ var result = 10 + 20;
 
 ⇒ 즉, 식별자는 변수의 값이 아닌 **메모리 주소를 기억**
 
-![값은 구별하지 못 하고 메모리 주소를 구별한다.](ch4_a4.png)
+![값은 구별하지 못 하고 메모리 주소를 구별한다.](/images/ch04/ch4_a4.png)
 
 값은 구별하지 못 하고 메모리 주소를 구별한다.
 
@@ -122,15 +102,14 @@ var result = 10 + 20;
 **var로 변수 선언하기**
 
 1. **선언 단계** : 변수 이름을 등록 → 메모리 공간 확보
-    
-    ```jsx
-    var score;
-    ```
-    
+
+   ```jsx
+   var score;
+   ```
+
 2. **초기화 단계** : JS는 암묵적으로 undefined라는 값이 할당되어 초기화된다.
-    
-    ![image.png](ch4_a5.png)
-    
+
+   ![image.png](/images/ch04/ch4_a5.png)
 
 `var` 키워드는 선언 단계와 초기화 단계가 동시에 진행된다.
 
@@ -180,17 +159,15 @@ ex 2) 변수 선언 앞뒤로 참조하는 코드
 console.log(x); // x가 선언된 상태라 undefined가 출력된다
 var x = 100;
 console.log(x); //100이 출력된다
-
 ```
 
 위의 코드는 아래와 같이 JS엔진에 의해 처리된다
 
 ```jsx
-var x //변수 호이스팅, 위로 끌어올려짐
+var x; //변수 호이스팅, 위로 끌어올려짐
 console.log(x); // undefined
 var x = 100;
 console.log(x); // 100
-
 ```
 
 `var` 키워드로 변수를 선언했기에, 선언 단계와 초기화가 동시에 실행된다.
@@ -210,7 +187,6 @@ console.log(b); // ReferenceError: b is not defined
 let b = 20;
 console.log(c); // ReferenceError: c is not defined
 const c = 30;
-
 ```
 
 왜냐하면 `let`과 `const`는 선언이 호이스팅되지만 초기화는 호이스팅되지 않는다.
@@ -229,7 +205,7 @@ var score = 80l
 
 위에서도 언급했듯이,
 
-**선언 단계는 호이스팅**으로 인해 먼저 이루어지고, 
+**선언 단계는 호이스팅**으로 인해 먼저 이루어지고,
 
 **할당 단계는 순차적으로 실행되는 런타임**에 실행된다.
 
@@ -253,7 +229,7 @@ var score; // 1
 console.log(score); // ??
 ```
 
-![image.png](ch4_a6.png)
+![image.png](/images/ch04/ch4_a6.png)
 
 당연히, 해당 결과도 80으로 출력된다.
 
@@ -270,7 +246,7 @@ console.log(score); // ??
 
 ### **4-6-2. 재할당 과정**
 
-![image.png](ch4_a7.png)
+![image.png](/images/ch04/ch4_a7.png)
 
 값의 재할당 : score라는 변수의 메모리 주소가 새로운 주소로 바뀌는 것을 뜻한다
 
@@ -288,27 +264,17 @@ console.log(score); // ??
 
 1. 문자, 숫자, 언더스코어(`_`), 달러기호`$` 만 포함할 수 있다.
 2. 숫자로 시작할 수는 없다.
-3. 예약어는 식별자로 사용할 수 없다.
-    
-    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words
-    
+3. [예약어는 식별자로 사용할 수 없다.](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words)
 
 ### **4-7-1. 네이밍 컨벤션**
 
 대표적으로 4가지 유형의 네이밍 컨벤션이 있다
 
 - **카멜 케이스 : 변수, 함수의 이름**
-    
-    `let devoceanYoung;` 소문자대문자
-    
+  `let devoceanYoung;` 소문자대문자
 - **파스칼 케이스 : 생성자 함수, 클래스 이름**
-    
-    `let DevoceanYoung;` 대문자대문자
-    
+  `let DevoceanYoung;` 대문자대문자
 - 스네이크 케이스
-    
-    `let devocean_young;` 소문자_소문자
-    
+  `let devocean_young;` 소문자\_소문자
 - 헝가리언 케이스
-    
-    `let strDevoceanYoung;` 타입대문자대문자
+  `let strDevoceanYoung;` 타입대문자대문자
