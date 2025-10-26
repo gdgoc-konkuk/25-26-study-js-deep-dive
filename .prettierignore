@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Cache
+.cache
+.turbo
+.vercel
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+
+# Public assets
+public
+
+# MDX images (optional - remove if you want to format MDX files)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
