@@ -9,7 +9,16 @@ export const metadata = {
 
 const navbar = (
   <Navbar
-    logo={<b>GDGoC Konkuk</b>}
+    logo={
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <img
+          src="/images/logo.webp"
+          alt="GDGoC Logo"
+          style={{ height: '32px', width: 'auto' }}
+        />
+        <b>GDGoC Konkuk</b>
+      </div>
+    }
     // ... Your additional navbar options
   />
 );
