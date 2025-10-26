@@ -22,7 +22,7 @@ const navbar = (
     // ... Your additional navbar options
   />
 );
-const footer = <Footer>MIT {new Date().getFullYear()} © GDGoC Konkuk</Footer>;
+const footer = <Footer>{new Date().getFullYear()} GDGoC Konkuk</Footer>;
 
 export default async function RootLayout({
   children,
