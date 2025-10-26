@@ -6,6 +6,9 @@ on:
   push:
     branches:
       - main # main 브랜치에 푸시될 때 실행
+  pull_request:
+    branches:
+      - main # main으로 향하는 PR이 생성되거나 업데이트될 때 실행
 
 # GitHub Pages 배포를 위한 권한 설정
 permissions:
@@ -26,13 +29,13 @@ jobs:
       # 1. 소스 코드 체크아웃
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       # 2. Node.js 환경 설정
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      
+          node-version: "20"
+
       # 3. pnpm 설치
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -58,22 +61,22 @@ jobs:
       # 6. 의존성 설치 (캐시가 있으면 매우 빠르게 실행됨)
       - name: Install dependencies
         run: pnpm install
-      
+
       # 7. 프로젝트 빌드 (Next.js 정적 export)
       - name: Build
         run: pnpm build
-      
+
       # 8. GitHub Pages 배포 준비
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
+
       # 9. 빌드 결과물(artifact) 업로드
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Next.js export 결과물 경로
           path: ./out
-  
+
   # 배포 잡
   deploy:
     # GitHub Pages 배포 환경 설정
@@ -83,6 +86,8 @@ jobs:
     # 빌드 잡이 성공해야 실행됨
     needs: build
     runs-on: ubuntu-latest
+    # main 브랜치에 푸시될 때만 배포 (PR에서는 배포하지 않음)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       # 업로드된 artifact를 GitHub Pages에 배포
       - name: Deploy to GitHub Pages
