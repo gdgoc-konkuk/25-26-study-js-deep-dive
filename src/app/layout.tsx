@@ -1,6 +1,6 @@
-import { Footer, Layout, Navbar } from "nextra-theme-docs";
-import { getPageMap } from "nextra/page-map";
-import "nextra-theme-docs/style.css";
+import { Footer, Layout, Navbar } from 'nextra-theme-docs';
+import { getPageMap } from 'nextra/page-map';
+import 'nextra-theme-docs/style.css';
 
 export const metadata = {
   // Define your metadata here
@@ -9,11 +9,20 @@ export const metadata = {
 
 const navbar = (
   <Navbar
-    logo={<b>GDGoC Konkuk</b>}
+    logo={
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <img
+          src="/images/logo.webp"
+          alt="GDGoC Logo"
+          style={{ height: '32px', width: 'auto' }}
+        />
+        <b>GDGoC Konkuk</b>
+      </div>
+    }
     // ... Your additional navbar options
   />
 );
-const footer = <Footer>MIT {new Date().getFullYear()} © GDGoC Konkuk</Footer>;
+const footer = <Footer>{new Date().getFullYear()} GDGoC Konkuk</Footer>;
 
 export default async function RootLayout({
   children,
