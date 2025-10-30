@@ -1,1 +1,892 @@
-﻿## B그룹에서 진행할 페이지입니다.
+# 6장 데이터 타입
+
+JS의 모든 값은 반드시 데이터 타입을 가진다.
+
+데이터 타입 = 값의 종류 구분 + 해석 및 처리 방법 결정
+
+**데이터 타입 분류:**
+
+| 구분      | 데이터 타입           | 설명                                              |
+| --------- | --------------------- | ------------------------------------------------- |
+|           | 숫자 타입 (number)    | 정수와 실수 구분 없는 숫자 타입                      |
+|           | 문자열 타입 (string)  | 텍스트 데이터                                            |
+| 원시 타입 | 불리언 타입 (boolean) | 논리적 참(true), 거짓(false)                       |
+| (Primitive Type) | undefined 타입        | var 키워드 선언 변수에 암묵적 할당 값   |
+|           | null 타입             | 값 없음을 의도적으로 명시할 때 사용 |
+|           | 심벌 타입 (symbol)    | ES6 추가 - 변경 불가능한 유일무이한 값                               |
+| 객체 타입 (Object/Reference Type) |                       | 객체, 함수, 배열 등                                  |
+
+개발자는 데이터 타입으로 값의 의미를 명확히 표현해야 함
+
+ex) 숫자 `1` ≠ 문자열 `'1'`
+
+## 6-1. 숫자 타입
+
+JS는 C, Java와 달리 하나의 숫자 타입만 존재
+
+**특징:**
+
+- 정수, 실수, 부동소수점 구분 없이 **하나의 타입**
+- **64비트 부동소수점 형식** (배정밀도, double-precision) 사용
+- **모든 수를 실수로 처리**
+
+```jsx
+// 모두 number 타입
+var integer = 10;
+var double = 10.12;
+var negative = -20;
+
+// 모든 숫자는 실수로 처리
+console.log(1 === 1.0);  // true
+console.log(4 / 2);      // 2
+console.log(3 / 2);      // 1.5 (정수 나눗셈 아님)
+```
+
+**다양한 진법 표현:**
+
+JS는 2진수, 8진수, 16진수 리터럴 제공 → 모두 10진수로 해석
+
+```jsx
+var binary = 0b01000001;  // 2진수 (0b 접두사)
+var octal = 0o101;        // 8진수 (0o 접두사)
+var hex = 0x41;           // 16진수 (0x 접두사)
+
+console.log(binary);      // 65
+console.log(octal);       // 65
+console.log(hex);         // 65
+console.log(binary === octal);  // true
+console.log(octal === hex);     // true
+```
+
+**특별한 숫자 값 3가지:**
+
+1. **Infinity**: 양의 무한대
+2. **-Infinity**: 음의 무한대
+3. **NaN** (Not-a-Number): 산술 연산 불가
+
+```jsx
+console.log(10 / 0);        // Infinity
+console.log(10 / -0);       // -Infinity
+console.log(1 * 'String');  // NaN
+```
+
+**주의사항:**
+
+- JS는 대소문자 구분 → `NaN` 정확히 표기 필수
+- `NaN`은 자기 자신과도 같지 않은 유일한 값 (`NaN === NaN`은 `false`)
+- `NaN` 확인 → `Number.isNaN()` 메서드 사용
+
+```jsx
+console.log(NaN === NaN);        // false
+console.log(Number.isNaN(NaN));  // true
+console.log(Number.isNaN(10));   // false
+```
+
+## 6-2. 문자열 타입
+
+**문자열(String)**: 텍스트 데이터 표현
+
+**특징:**
+
+- 0개 이상의 16비트 유니코드 문자(UTF-16) 집합
+- 전 세계 대부분 문자 표현 가능
+- 작은따옴표(`''`), 큰따옴표(`""`), 백틱(` `` `) 사용
+- **원시 타입** + **변경 불가능한 값(immutable value)**
+
+```jsx
+var string;
+string = '문자열';    // 작은따옴표
+string = "문자열";    // 큰따옴표
+string = `문자열`;    // 백틱 (ES6)
+
+// 따옴표 내부의 다른 종류 따옴표 = 문자열로 인식
+string = '작은따옴표로 감싼 문자열 내의 "큰따옴표"는 문자열로 인식된다.';
+string = "큰따옴표로 감싼 문자열 내의 '작은따옴표'는 문자열로 인식된다.";
+```
+
+**따옴표의 필요성:**
+
+키워드나 식별자와 문자열 구분 위함
+
+```jsx
+var string = hello;  // ReferenceError: hello is not defined
+var string = 'hello';  // 'hello'라는 문자열
+```
+
+**문자열의 불변성:**
+
+문자열 생성 후 변경 불가 (11장에서 자세히 다룸)
+
+```jsx
+var str = 'Hello';
+str[0] = 'W';  // 변경 불가 (에러 없지만 변경 안 됨)
+console.log(str);  // 'Hello'
+```
+
+## 6-3. 템플릿 리터럴
+
+**템플릿 리터럴(Template Literal)**: ES6 도입 - 새로운 문자열 표기법
+
+**제공 기능:**
+- 멀티라인 문자열 (Multi-line String)
+- 표현식 삽입 (Expression Interpolation)
+- 태그드 템플릿 (Tagged Template)
+
+백틱(` `` `) 사용 → 런타임에 일반 문자열로 변환
+
+```jsx
+var template = `Template literal`;
+console.log(template);  // Template literal
+```
+
+### 6-3-1. 멀티라인 문자열
+
+**일반 문자열의 줄바꿈:**
+
+줄바꿈 허용 X → 백슬래시(`\`)로 시작하는 이스케이프 시퀀스 사용 필요
+
+**주요 이스케이프 시퀀스:**
+
+| 이스케이프 시퀀스 | 의미 |
+|------------------|------|
+| `\n` | 개행 (Line Feed) |
+| `\t` | 탭 (Tab) |
+| `\\` | 백슬래시 |
+| `\'` | 작은따옴표 |
+| `\"` | 큰따옴표 |
+
+```jsx
+// 잘못된 예: 개행 직접 입력
+var str = 'Hello
+world.';  // SyntaxError: Invalid or unexpected token
+
+// 올바른 예: 이스케이프 시퀀스 사용
+var template = '<ul>\n\t<li><a href="#">Home</a></li>\n</ul>';
+console.log(template);
+// 출력:
+// <ul>
+// 	<li><a href="#">Home</a></li>
+// </ul>
+```
+
+**템플릿 리터럴의 멀티라인:**
+
+이스케이프 시퀀스 없이 줄바꿈과 공백 그대로 적용
+
+```jsx
+var template = `<ul>
+  <li><a href="#">Home</a></li>
+</ul>`;
+
+console.log(template);
+// 출력:
+// <ul>
+//   <li><a href="#">Home</a></li>
+// </ul>
+```
+
+### 6-3-2. 표현식 삽입
+
+**일반 문자열의 연결:**
+
+문자열 연결 연산자 `+` 사용
+
+```jsx
+var first = 'Ung-mo';
+var last = 'Lee';
+
+// ES5: 문자열 연결
+console.log('My name is ' + first + ' ' + last + '.');
+// My name is Ung-mo Lee.
+```
+
+**템플릿 리터럴의 표현식 삽입:**
+
+`${}` 사용 → 가독성과 편의성 향상
+
+```jsx
+var first = 'Ung-mo';
+var last = 'Lee';
+
+// ES6: 표현식 삽입
+console.log(`My name is ${first} ${last}.`);
+// My name is Ung-mo Lee.
+```
+
+**활용:**
+
+```jsx
+console.log(`1 + 2 = ${1 + 2}`);  // 1 + 2 = 3
+```
+
+**주의:**
+
+표현식 삽입은 반드시 템플릿 리터럴 내에서 사용
+
+→ 일반 문자열에서는 문자열로 취급
+
+```jsx
+console.log(`1 + 2 = ${1 + 2}`);  // 1 + 2 = 3 (표현식 평가)
+console.log('1 + 2 = ${1 + 2}');  // 1 + 2 = ${1 + 2} (문자열 그대로)
+```
+
+## 6-4. 불리언 타입
+
+**불리언(Boolean)**: 논리적 참, 거짓 나타내는 `true`, `false` 두 값만 존재
+
+```jsx
+var foo = true;
+console.log(foo);  // true
+
+foo = false;
+console.log(foo);  // false
+```
+
+주로 조건문에서 프로그램 흐름 제어에 사용
+
+```jsx
+var isAdult = true;
+
+if (isAdult) {
+  console.log('성인입니다.');
+} else {
+  console.log('미성년자입니다.');
+}
+```
+
+## 6-5. undefined 타입
+
+**undefined** 타입의 값 = `undefined`가 유일
+
+**의미와 용도:**
+
+- `undefined` = "값이 할당된 적 없음"
+- `var` 키워드 선언 변수 → 암묵적으로 `undefined`로 초기화
+- 개발자가 의도적 할당은 비권장
+
+```jsx
+var foo;
+console.log(foo);  // undefined
+```
+
+**변수 초기화 과정:**
+
+1. 변수 선언 시 메모리 공간 확보
+2. JS 엔진이 암묵적으로 `undefined`로 초기화
+3. 첫 할당까지 `undefined` 상태 유지
+
+**undefined vs null:**
+
+- `undefined`: JS 엔진이 변수 초기화에 사용
+- `null`: 개발자가 의도적으로 "값 없음" 명시
+
+⇒ 의도적으로 "값 없음" 표현 시 `undefined` 아닌 `null` 사용
+
+```jsx
+var foo = null;  // 의도적으로 값 없음 명시
+```
+
+## 6-6. null 타입
+
+**null** 타입의 값 = `null`이 유일
+
+**의미와 용도:**
+
+- `null` = "값 없음"을 의도적으로 명시
+- 변수가 이전 참조값을 더 이상 참조하지 않겠다는 의미
+- 이전 할당 값에 대한 참조 명시적 제거
+
+```jsx
+var foo = 'Lee';
+
+// foo가 더 이상 'Lee'를 참조하지 않도록 설정
+// 이전 값 참조 제거 → 가비지 컬렉션 대상
+foo = null;
+```
+
+**활용:**
+
+함수가 유효한 값 반환 불가 시 명시적으로 `null` 반환
+
+```jsx
+var element = document.querySelector('.myClass');
+// HTML 문서에 .myClass 없으면 null 반환
+console.log(element);  // null
+```
+
+**주의:**
+
+- JS는 대소문자 구분 → `null` 정확히 표기
+- `Null`, `NULL` 등 = 다른 식별자로 인식
+
+## 6-7. 심벌 타입
+
+**심벌(Symbol)**: ES6 추가 - 7번째 타입, 변경 불가능한 원시 타입
+
+**특징:**
+
+- 다른 값과 **중복 없는 유일무이한 값**
+- 주로 객체의 유일한 프로퍼티 키 생성에 사용
+- 외부 노출 X → 충돌 위험 없음
+
+**심벌 값 생성:**
+
+`Symbol` 함수 호출
+
+```jsx
+// 심벌 값 생성
+var key = Symbol('key');
+console.log(typeof key);  // symbol
+
+// 객체 생성
+var obj = {};
+
+// 심벌을 프로퍼티 키로 사용
+obj[key] = 'value';
+console.log(obj[key]);  // value
+```
+
+**활용:**
+
+```jsx
+// 서로 다른 심벌 = 유일무이
+var symbol1 = Symbol('mySymbol');
+var symbol2 = Symbol('mySymbol');
+
+console.log(symbol1 === symbol2);  // false
+
+// 객체 프로퍼티 키 충돌 방지
+var obj = {
+  [symbol1]: 'value1',
+  [symbol2]: 'value2'
+};
+
+console.log(obj[symbol1]);  // value1
+console.log(obj[symbol2]);  // value2
+```
+
+심벌 자세한 내용은 33장에서 다룸
+
+## 6-8. 객체 타입
+
+지금까지 살펴본 6가지 원시 타입 이외 = 모두 **객체 타입**
+
+**핵심:**
+
+JS = **객체 기반 언어**
+
+→ **JS를 이루는 거의 모든 것 = 객체**
+
+- 배열, 함수, 정규 표현식 등 모두 객체
+- 원시 타입 제외 = 모두 객체 타입
+
+객체 타입은 11장에서 자세히 다룸
+
+```jsx
+var obj = { name: 'Lee', age: 20 };  // 객체
+var arr = [1, 2, 3];                 // 배열 (객체)
+var func = function() {};            // 함수 (객체)
+```
+
+## 6-9. 데이터 타입의 필요성
+
+데이터 타입이 필요한 이유 = 3가지 측면
+
+### 6-9-1. 메모리 공간의 확보
+
+값 저장 시 **확보할 메모리 공간 크기 결정** 위함
+
+→ 낭비와 손실 없이 저장
+
+예제:
+
+```jsx
+var score = 100;
+```
+
+**값의 저장 과정:**
+
+1. 리터럴 `100`을 숫자 타입 값으로 해석
+2. 숫자 타입 = 8바이트 공간 필요
+3. 8바이트 메모리 공간 확보
+4. 100을 2진수로 변환 → 메모리에 저장
+
+데이터 타입 없으면 → 확보할 메모리 크기 알 수 없음
+
+### 6-9-2. 메모리 공간의 참조
+
+값 참조 시 **읽어들일 메모리 공간 크기 결정** 위함
+
+```jsx
+var score = 100;
+console.log(score);  // 변수 score 참조
+```
+
+**값의 참조 과정:**
+
+1. 변수 `score`의 메모리 주소 확인
+2. 저장된 값의 타입(숫자) 확인
+3. 숫자 타입 = 8바이트 → 8바이트만큼 읽음
+
+잘못된 크기로 읽으면 → 값 손실 or 다른 값까지 읽는 문제 발생
+
+### 6-9-3. 값의 해석
+
+메모리에서 읽은 2진수를 **어떻게 해석할지 결정** 위함
+
+메모리 저장 값 = 모두 2진수 비트 나열
+
+ex) `0100 0001` 해석:
+- 숫자로 해석: 65
+- 문자로 해석: 'A'
+
+데이터 타입에 따라 동일 2진수도 다르게 해석
+
+**심벌 테이블:**
+
+컴파일러/인터프리터는 **심벌 테이블(Symbol Table)**로 관리
+
+→ 식별자를 키로 다음 정보 저장:
+- 바인딩된 값의 메모리 주소
+- 데이터 타입
+- 스코프
+
+## 6-10. 동적 타이핑
+
+프로그래밍 언어의 변수 타입 결정 방식에 따른 분류
+
+### 6-10-1. 정적 타입 언어와 동적 타입 언어
+
+**정적 타입 언어 (Static Type Language)**
+
+예: C, C++, Java, Kotlin, Go, Haskell, Rust, Scala
+
+**특징:**
+
+- **명시적 타입 선언**: 변수 선언 시 데이터 타입 사전 선언 필요
+- **타입 변경 불가**: 선언한 타입 이외 값 할당 불가
+- **컴파일 타임 타입 체크**: 컴파일 시점에 타입 체크 수행
+- **타입 안정성**: 타입 일관성 강제 → 안정적 코드 구현
+
+```c
+// C 언어 예시
+char c;      // 1바이트 정수 타입 (-128 ~ 127)
+int num;     // 4바이트 정수 타입
+
+c = 100;     // OK
+c = "Hello"; // 컴파일 에러: 타입 불일치
+```
+
+**동적 타입 언어 (Dynamic Type Language)**
+
+예: JavaScript, Python, PHP, Ruby, Lisp, Perl
+
+**특징:**
+
+- **타입 선언 불필요**: 변수 선언 시 타입 선언 안 함
+- **자유로운 할당**: 어떤 타입의 값이든 자유롭게 할당 가능
+- **동적 타입 결정**: 할당된 값에 의해 타입 동적 결정
+- **런타임 타입 결정**: 실행 시점에 타입 결정
+
+```jsx
+var foo;
+console.log(typeof foo);  // undefined
+
+foo = 3;
+console.log(typeof foo);  // number
+
+foo = 'Hello';
+console.log(typeof foo);  // string
+
+foo = true;
+console.log(typeof foo);  // boolean
+
+foo = null;
+console.log(typeof foo);  // object (JS의 버그)
+
+foo = Symbol();
+console.log(typeof foo);  // symbol
+
+foo = {};
+console.log(typeof foo);  // object
+
+foo = [];
+console.log(typeof foo);  // object
+
+foo = function() {};
+console.log(typeof foo);  // function
+```
+
+**typeof 연산자:**
+
+피연산자의 데이터 타입을 문자열로 반환
+
+**핵심:**
+
+- JS에서 **변수는 타입을 갖지 않음**
+- **값은 타입을 가짐**
+- 할당된 값의 타입에 따라 변수 타입이 동적 결정
+
+⇒ **동적 타이핑(Dynamic Typing)**
+
+→ JS = **동적 타입 언어**
+
+### 6-10-2. 동적 타입 언어의 장단점
+
+**장점 (유연성):**
+
+- 변수 선언 간편
+- 타입에 대한 고민 적음
+- 빠른 프로토타이핑 가능
+
+**단점 (신뢰성 저하):**
+
+- 변수 타입이 언제든 변경 가능 → 값 추적 어려움
+- 타입 확인 전까지 변수 타입 확신 불가
+- 암묵적 타입 변환으로 예측 불가 동작
+- 복잡한 프로그램에서 런타임 에러 발생 가능성 증가
+
+**동적 타입 언어 사용 시 주의사항:**
+
+1. **변수 사용 최소화**: 꼭 필요한 경우에만 제한적 사용
+2. **스코프 최소화**: 변수 유효 범위를 최대한 좁게
+3. **전역 변수 지양**: 전역 변수 최대한 사용 안 함
+4. **상수 활용**: 변경 불필요 값은 `const` 키워드 사용
+5. **의미 있는 네이밍**: 변수 이름으로 목적과 의미 명확 전달
+
+**핵심 원칙:**
+
+> "동작하는 코드도 중요하지만, **가독성 좋은 코드가 좋은 코드**"
+
+코드는 작성 시간 < 읽히는 시간
+
+→ 가독성과 유지보수성을 최우선 고려
+
+---
+
+## 학습 점검 문제
+
+### 문제 1: 데이터 타입 구분
+
+다음 값들의 데이터 타입을 `typeof` 연산자로 확인했을 때의 결과를 쓰시오.
+
+```jsx
+A. 42
+B. '42'
+C. true
+D. undefined
+E. null
+F. Symbol('key')
+G. { name: 'Lee' }
+H. [1, 2, 3]
+I. function() {}
+```
+
+<details>
+<summary>해답 보기</summary>
+
+```jsx
+A. typeof 42                  // 'number'
+B. typeof '42'                // 'string'
+C. typeof true                // 'boolean'
+D. typeof undefined           // 'undefined'
+E. typeof null                // 'object' (JS의 버그)
+F. typeof Symbol('key')       // 'symbol'
+G. typeof { name: 'Lee' }     // 'object'
+H. typeof [1, 2, 3]           // 'object'
+I. typeof function() {}       // 'function'
+```
+
+**주의:**
+- `null`의 typeof 결과가 'object' = JS 초기 버전의 버그
+- 배열도 객체 → 'object' 반환
+- 함수는 'function' 반환 (특별 취급)
+</details>
+
+### 문제 2: 숫자 타입의 특징
+
+다음 코드의 실행 결과를 예측하시오.
+
+```jsx
+console.log(1 === 1.0);
+console.log(0.1 + 0.2 === 0.3);
+console.log(10 / 0);
+console.log(-10 / 0);
+console.log(0 / 0);
+```
+
+<details>
+<summary>해답 보기</summary>
+
+```jsx
+console.log(1 === 1.0);          // true (모든 수를 실수로 처리)
+console.log(0.1 + 0.2 === 0.3);  // false (부동소수점 연산 한계)
+console.log(10 / 0);             // Infinity
+console.log(-10 / 0);            // -Infinity
+console.log(0 / 0);              // NaN
+```
+
+**설명:**
+- `0.1 + 0.2` = 정확히 `0.3`이 아니라 `0.30000000000000004`
+- 2진법 변환 시 무한소수가 되는 일부 10진수의 특성
+- 부동소수점 연산 비교 시 주의 필요
+</details>
+
+### 문제 3: 템플릿 리터럴 활용
+
+다음 변수들을 사용하여 "My name is John Doe and I am 25 years old." 문자열을 템플릿 리터럴로 생성하시오.
+
+```jsx
+var firstName = 'John';
+var lastName = 'Doe';
+var age = 25;
+```
+
+<details>
+<summary>해답 보기</summary>
+
+```jsx
+var message = `My name is ${firstName} ${lastName} and I am ${age} years old.`;
+console.log(message);
+// My name is John Doe and I am 25 years old.
+
+// 표현식 삽입 활용
+var message2 = `My name is ${firstName} ${lastName} and I am ${age + 1} years old next year.`;
+console.log(message2);
+// My name is John Doe and I am 26 years old next year.
+```
+</details>
+
+### 문제 4: undefined vs null
+
+다음 중 올바른 사용법을 고르고, 그 이유를 설명하시오.
+
+```jsx
+// A
+var foo;
+console.log(foo);  // undefined
+
+// B
+var bar = undefined;
+
+// C
+var baz = null;
+```
+
+<details>
+<summary>해답 보기</summary>
+
+**올바른 사용:**
+
+- A: 올바름 - 변수 선언 시 JS 엔진이 자동으로 undefined 할당
+- C: 올바름 - 의도적으로 값 없음 명시 시 null 사용
+
+**비권장:**
+
+- B: 비권장 - 개발자가 의도적으로 undefined 할당 = 본래 취지에 맞지 않음
+
+**이유:**
+- `undefined` = JS 엔진이 초기화에 사용하는 값
+- 개발자가 명시적으로 "값 없음" 나타낼 때 = `null` 사용
+- 변수 상태 명확 구분 가능
+  - `undefined`: 초기화 안 됨 (엔진 관리)
+  - `null`: 의도적으로 값 없음 (개발자 의도)
+</details>
+
+### 문제 5: 동적 타이핑의 문제
+
+다음 코드의 문제점을 찾고 개선 방안을 제시하시오.
+
+```jsx
+var data = '100';
+console.log(data + 50);    // 기대: 150
+console.log(data - 50);    // 기대: 50
+```
+
+<details>
+<summary>해답 보기</summary>
+
+**문제점:**
+
+```jsx
+var data = '100';
+console.log(data + 50);    // '10050' (문자열 연결)
+console.log(data - 50);    // 50 (암묵적 타입 변환)
+```
+
+- `+` 연산자 = 문자열 연결 연산자로 동작
+- `-` 연산자 = 산술 연산자로 동작 → 문자열을 숫자로 변환
+
+**개선 방안:**
+
+```jsx
+// 방법 1: 명시적 타입 변환
+var data = '100';
+console.log(Number(data) + 50);    // 150
+console.log(Number(data) - 50);    // 50
+
+// 방법 2: 처음부터 올바른 타입 사용
+var data = 100;
+console.log(data + 50);    // 150
+console.log(data - 50);    // 50
+
+// 방법 3: parseInt 사용 (정수 변환)
+var data = '100';
+console.log(parseInt(data) + 50);    // 150
+```
+
+**교훈:**
+- 동적 타이핑의 편리함에 의존 X
+- 명시적 타입 변환으로 의도 명확화
+- 변수 타입을 일관되게 유지
+</details>
+
+### 문제 6: 심벌의 활용
+
+다음 객체에 외부에 노출되지 않는 비공개 프로퍼티를 추가하시오.
+
+```jsx
+var user = {
+  name: 'Lee',
+  age: 20
+};
+```
+
+<details>
+<summary>해답 보기</summary>
+
+```jsx
+// 심벌을 사용한 비공개 프로퍼티
+var privateKey = Symbol('privateData');
+
+var user = {
+  name: 'Lee',
+  age: 20,
+  [privateKey]: 'secret information'
+};
+
+console.log(user.name);           // 'Lee'
+console.log(user[privateKey]);    // 'secret information'
+console.log(Object.keys(user));   // ['name', 'age'] (심벌 키 제외)
+
+// 일반 프로퍼티 순회에서 심벌 제외
+for (var key in user) {
+  console.log(key);  // 'name', 'age'만 출력
+}
+
+// 심벌로 생성한 프로퍼티 키 = 외부 접근 어려움
+// 다른 심벌 값으로는 접근 불가
+var anotherKey = Symbol('privateData');
+console.log(user[anotherKey]);    // undefined
+```
+
+**활용 사례:**
+- 프레임워크/라이브러리 내부 구현
+- 이름 충돌 방지 필요한 상황
+- Well-known symbols (내장 심벌): `Symbol.iterator`, `Symbol.toStringTag` 등
+</details>
+
+---
+
+## 심화 학습: 타입 변환과 단축 평가
+
+JS = 동적 타입 언어 → 다양한 타입 변환 발생
+
+**명시적 타입 변환 (Explicit Coercion):**
+
+개발자가 의도적으로 타입 변환
+
+```jsx
+var num = 10;
+var str = String(num);       // '10'
+var bool = Boolean(num);     // true
+
+var str2 = '100';
+var num2 = Number(str2);     // 100
+var num3 = parseInt(str2);   // 100
+```
+
+**암묵적 타입 변환 (Implicit Coercion):**
+
+JS 엔진이 자동으로 타입 변환
+
+```jsx
+var x = 10;
+
+// 문자열 연결 연산자
+var str = x + '';            // '10' (숫자 → 문자열)
+
+// 산술 연산자
+var num = '10' - 0;          // 10 (문자열 → 숫자)
+var num2 = '10' * 1;         // 10 (문자열 → 숫자)
+
+// 불리언 컨텍스트
+if ('hello') {               // 'hello' → true
+  console.log('참');
+}
+
+if (0) {                     // 0 → false
+  console.log('거짓');
+}
+```
+
+**Truthy와 Falsy 값:**
+
+JS는 불리언 타입 아닌 값을 불리언 컨텍스트에서 사용 시 Truthy or Falsy로 평가
+
+**Falsy 값 (거짓으로 평가):**
+- `false`
+- `0`, `-0`
+- `''` (빈 문자열)
+- `null`
+- `undefined`
+- `NaN`
+
+**Truthy 값:**
+- Falsy 값 제외한 모든 값
+
+```jsx
+// Falsy 값
+if (false) { }      // 실행 안 됨
+if (0) { }          // 실행 안 됨
+if ('') { }         // 실행 안 됨
+if (null) { }       // 실행 안 됨
+if (undefined) { }  // 실행 안 됨
+if (NaN) { }        // 실행 안 됨
+
+// Truthy 값
+if (true) { }       // 실행됨
+if (1) { }          // 실행됨
+if ('hello') { }    // 실행됨
+if ({}) { }         // 실행됨 (빈 객체도 Truthy)
+if ([]) { }         // 실행됨 (빈 배열도 Truthy)
+```
+
+타입 변환과 단축 평가 자세한 내용 = 9장에서 다룸
+
+## 심화 학습: 데이터 타입과 메모리
+
+**원시 타입과 객체 타입의 메모리 관리:**
+
+- **원시 타입**: 값 자체가 변수에 저장 (값에 의한 전달)
+- **객체 타입**: 참조값(메모리 주소)이 변수에 저장 (참조에 의한 전달)
+
+```jsx
+// 원시 타입
+var num1 = 100;
+var num2 = num1;  // 값 복사
+num2 = 200;
+
+console.log(num1);  // 100 (변경 안 됨)
+console.log(num2);  // 200
+
+// 객체 타입
+var obj1 = { value: 100 };
+var obj2 = obj1;  // 참조값 복사
+obj2.value = 200;
+
+console.log(obj1.value);  // 200 (함께 변경됨)
+console.log(obj2.value);  // 200
+```
+
+이러한 차이는 11장에서 더 자세히 다룸
