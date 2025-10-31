@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Footer, Layout, Navbar } from 'nextra-theme-docs';
 import { getPageMap } from 'nextra/page-map';
 import 'nextra-theme-docs/style.css';
@@ -11,10 +12,12 @@ const navbar = (
   <Navbar
     logo={
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <img
+        <Image
           src="/images/logo.webp"
           alt="GDGoC Logo"
-          style={{ height: '32px', width: 'auto' }}
+          width={32}
+          height={32}
+          priority
         />
         <b>GDGoC Konkuk</b>
       </div>
