@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { Footer, Layout, Navbar } from 'nextra-theme-docs';
 import { getPageMap } from 'nextra/page-map';
 import 'nextra-theme-docs/style.css';
@@ -8,16 +7,17 @@ export const metadata = {
   // For more information on metadata API, see: https://nextjs.org/docs/app/building-your-application/optimizing/metadata
 };
 
+const basePath =
+  process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+
 const navbar = (
   <Navbar
     logo={
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Image
-          src="/images/logo.webp"
+        <img
+          src={`${basePath}/images/logo.webp`}
           alt="GDGoC Logo"
-          width={32}
-          height={32}
-          priority
+          style={{ height: '32px', width: 'auto' }}
         />
         <b>GDGoC Konkuk</b>
       </div>
