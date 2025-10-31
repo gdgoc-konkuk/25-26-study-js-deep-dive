@@ -1,7 +1,9 @@
 import nextra from 'nextra';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
-const withNextra = nextra({});
+const withNextra = nextra({
+  defaultShowCopyCode: true,
+});
 
 export default withNextra({
   output: isDevelopment ? 'standalone' : 'export',
