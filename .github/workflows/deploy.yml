@@ -68,7 +68,7 @@ jobs:
 
       # 8. Pagefind 검색 인덱스 생성
       - name: Generate search index
-        run: pnpm search
+        run: pnpm index
 
       # 9. GitHub Pages 배포 준비
       - name: Setup Pages
