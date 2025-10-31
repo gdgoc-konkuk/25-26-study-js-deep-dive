@@ -5,11 +5,11 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:search": "next build && pagefind --site out --output-path out/_pagefind",
     "start": "next start",
     "lint": "eslint",
-    "search": "pagefind --site out",
-    "deploy": "pnpm build && pnpm search && gh-pages -d out -t true",
-    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind"
+    "search": "pagefind --site out --output-path out/_pagefind",
+    "deploy": "pnpm build && pnpm search && gh-pages -d out -t true"
   },
   "dependencies": {
     "gh-pages": "^6.3.0",

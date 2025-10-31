@@ -66,11 +66,15 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # 8. GitHub Pages 배포 준비
+      # 8. Pagefind 검색 인덱스 생성
+      - name: Generate search index
+        run: pnpm search
+
+      # 9. GitHub Pages 배포 준비
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      # 9. 빌드 결과물(artifact) 업로드
+      # 10. 빌드 결과물(artifact) 업로드
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
