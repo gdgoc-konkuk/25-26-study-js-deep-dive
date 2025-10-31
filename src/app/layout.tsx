@@ -38,7 +38,7 @@ export default async function RootLayout({
         <Layout
           navbar={navbar}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/gdgoc-konkuk/25-26-study-js-deep-dive"
+          docsRepositoryBase="https://github.com/gdgoc-konkuk/25-26-study-js-deep-dive/home"
           footer={footer}
         >
           {children}
