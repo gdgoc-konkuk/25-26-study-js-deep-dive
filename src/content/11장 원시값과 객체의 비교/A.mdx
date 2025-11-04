@@ -1,0 +1,542 @@
+# 11장 원시값과 객체의 비교
+
+원시 타입과 객체 타입은 근본적으로 3가지 측면에서 다르다.
+
+1. 원시 타입은 변경 불가능한 값(immutable value)이고, 객체 타입은 변경 가능한 값(mutable value)이다.
+2. 원시 타입을 변수에 할당하면 변수에 실제 값이 저장되지만, 객체 타입을 변수에 할당하면 변수에는 객체가 저장된 메모리 주소(참조 값)가 저장된다.
+3. 원시 값을 다른 변수에 할당하면 실제 값이 복사되어 전달되지만(pass by value), 객체 값을 다른 변수에 할당하면 참조 값(객체의 메모리 주소)이 복사되어 전달된다(pass by reference).
+
+## 11-1. 원시 값
+
+### 11-1-1. 변경 불가능한 값
+
+원시 값은 변경 불가능한 값(immutable value)이다. 즉, 원시 값은 한 번 생성되면 그 값을 변경할 수 없다. 원시 값은 변경되는 것이 아니라 새로운 값이 생성되는 것이다.
+
+![원시값은 변경 불가능](/images/ch11/1.png)
+
+변수가 참조하던 메모리 공간의 주소가 변경된 이유는 변수에 할당된 원시 값이 변경 불가능한 값이기 때문이다. 만약 원시 값이 변경 가능한 값이라면 변수에 새로운 원시 값을 재할당했을 때 변수가 가리키던 메모리 공간의 주소를 바꿀 필요 없이 원시 값 자체를 변경하면 그만이다. 만약 그렇다면 변수가 참조하던 메모리 공간의 주소는 바뀌지 않는다.
+
+![원시값이 변경 가능하다면](/images/ch11/2.png)
+
+하지만 원시 값은 변경 불가능한 값이기 때문에 값을 직접 변경할 수 없다. 따라서 변수 값을 변경하기 위해 원시 값을 재할당하면 새로운 메모리 공간을 확보하고 재할당한 값을 저장한 후, 변수가 참조하던 메모리 공간의 주소를 변경한다. 값의 이러한 특성을 불변성(immutability)이라고 한다.
+
+불변성을 갖는 원시 값을 할당한 변수는 재할당 이외에 변수 값을 변경할 수 있는 방법이 없다. 만약 재할당 이외에 원시 값인 변수 값을 변경할 수 있다면 예기치 않게 변수 값이 변경될 수 있다는 것을 의미한다. 이는 값의 변경, 즉 상태 변경을 추적하기 어렵게 만든다.
+
+### 11-1-2. 문자열과 불변성
+
+자바스크립트의 문자열은 원시 값이며, 변경 불가능한 값이다. 즉, 문자열은 한 번 생성되면 그 값을 변경할 수 없다.
+
+```jsx
+var str = 'Hello';
+str = 'World';
+console.log(str); //World
+```
+
+위 예제에서 변수 str이 참조하던 문자열 'Hello'는 변경되지 않고 그대로 남아 있다. 변수 str이 참조하는 문자열이 'World'로 변경된 것이 아니라, 변수 str이 참조하는 문자열이 'Hello'에서 'World'로 바뀐 것이다. 즉, 변수 str이 참조하던 메모리 공간의 주소가 변경된 것이다.
+
+문자열의 특정 문자를 변경하려고 시도해보자.
+
+```jsx
+var str = 'Hello';
+str[0] = 'h'; //첫 번째 문자를 변경하려고 시도
+console.log(str); //Hello
+```
+
+위 예제에서 문자열 'Hello'의 첫 번째 문자를 변경하려고 시도했지만, 문자열은 변경 불가능한 값이기 때문에 아무런 효과가 없다. 따라서 변수 str이 참조하는 문자열은 여전히 'Hello'이다.
+문자열의 특정 문자를 변경하려면 문자열을 구성하는 문자들을 결합하여 새로운 문자열을 생성해야 한다.
+
+```jsx
+var str = 'Hello';
+str = 'h' + str.slice(1); //새로운 문자열 생성
+console.log(str); //hello
+```
+
+문자열은 유사 배열 객체이므로 인덱스를 사용하여 특정 문자에 접근할 수 있지만, 문자열은 변경 불가능한 값이기 때문에 인덱스를 사용하여 특정 문자를 변경할 수 없다.
+
+> **유사 배열 객체(array-like object)**: length 프로퍼티를 가지며 인덱스로 프로퍼티 값에 접근할 수 있는 객체를 말한다. 문자열은 배열처럼 인덱스를 통해 각 문자에 접근할 수 있으며, length 프로퍼티를 갖는다.
+
+### 11-1-3. 값에 의한 전달
+
+원시 값을 다른 변수에 할당하면 실제 값이 복사되어 전달된다. 이를 값에 의한 전달(pass by value)이라고 한다.
+
+```jsx
+var x = 10;
+var y = x; //x의 값이 y에 복사되어 전달된다.
+console.log(x); //10
+console.log(y); //10
+
+y = 20; //y에 새로운 값 20이 재할당된다.
+console.log(x); //10
+console.log(y); //20
+
+console.log(x === y); //false
+```
+
+위 예제에서 변수 x의 값이 변수 y에 복사되어 전달된다. 따라서 변수 x와 변수 y는 서로 다른 메모리 공간을 참조한다. 변수 y에 새로운 값 20이 재할당되더라도 변수 x의 값에는 아무런 영향이 없다. 즉, 변수 x와 변수 y는 독립적이다.
+
+정말 엄밀히 따지자면, 식별자는 값이 아니라 값이 저장된 메모리 공간의 주소를 가리킨다.
+
+따라서 변수 x와 변수 y는 서로 다른 메모리 공간을 가리킨다. 변수 y에 새로운 값 20이 재할당되면 변수 y가 가리키던 메모리 공간의 주소가 변경된다. 하지만 변수 x가 가리키던 메모리 공간의 주소는 변경되지 않는다. 이처럼 원시 값을 다른 변수에 할당하면 실제 값이 복사되어 전달된다.
+
+![값에 의한 전달](/images/ch11/3.png)
+
+## 11-2. 객체
+
+객체는 복합적인 자료 구조이며, 객체를 관리하는 방식이 원시 값과 비교해서 복잡하고 구현 방식도 브라우저 제조사마다 다를 수 있다.
+
+원시 값은 상대적으로 적은 메모리를 소비하지만 객체는 경우에 따라 크기가 매우 클 수도 있다. 객체를 생성하고 프로퍼티에 접근하는 것도 원시 값과 비교할 때 비용이 많이 드는 일이다.
+
+(자바스크립트의 객체는 해시 테이블과 유사한 [히든 클래스](https://engineering.linecorp.com/ko/blog/v8-hidden-class)라는 내부 메커니즘으로 구현되어 있다. 히든 클래스는 객체의 구조를 나타내는 청사진 역할을 한다. 객체가 생성될 때 히든 클래스가 생성되고, 객체에 프로퍼티가 추가되거나 삭제될 때 히든 클래스도 함께 변경된다. 이를 통해 자바스크립트 엔진은 객체의 구조를 빠르게 파악하고 최적화할 수 있다.)
+
+### 11-2-1. 변경 가능한 값
+
+객체 를 할당한 변수가 기억하는 메모리 주소를 통해 메모리 공간에 접근하면 참조 값(reference value)에 접근할 수 있다. 참조 값은 생성된 객체가 저장된
+메모리 공간의 주소, 그 자체다.
+
+![객체는 변경 가능한 값1](/images/ch11/4.png)
+
+원시 값은 변경 불가능한 값이었지만, 객체는 변경 가능한 값(mutable value)이다. 즉, 객체는 한 번 생성된 이후에도 그 상태(프로퍼티 값)를 변경할 수 있다.
+
+객체의 상태를 변경하는 것은 객체가 저장된 메모리 공간에 접근하여 프로퍼티 값을 변경하는 것이다. 따라서 객체를 할당한 변수를 통해 메모리 공간에 접근하면 참조 값을 얻을 수 있고, 참조 값을 통해 객체가 저장된 메모리 공간에 접근할 수 있다.
+
+![객체는 변경 가능한 값2](/images/ch11/5.png)
+
+#### 얕은 복사와 깊은 복사
+
+객체를 프로퍼티 값으로 갖는 객체의 경우:
+
+- **얕은 복사(Shallow Copy)**: 객체의 최상위 레벨만 복사하는 것. 중첩된 객체는 참조만 복사된다.
+- **깊은 복사(Deep Copy)**: 객체에 중첩되어 있는 객체까지 모두 복사하는 것. 완전히 독립적인 복사본을 생성한다.
+
+> 주의: 단순히 변수에 객체를 할당하는 것은 복사가 아니라 참조를 공유하는 것이다.
+
+```jsx
+// 참조 공유 (복사 아님)
+let obj1 = { a: 1, b: { c: 2 } };
+let obj2 = obj1; // 참조만 복사됨
+
+obj2.b.c = 20;
+console.log(obj1.b.c); // 20 (같은 객체를 가리킴)
+console.log(obj2.b.c); // 20
+
+// 얕은 복사 예제
+let obj3 = { a: 1, b: { c: 2 } };
+let obj4 = { ...obj3 }; // 스프레드 연산자를 이용한 얕은 복사
+
+obj4.a = 10; // 최상위 레벨 변경
+obj4.b.c = 20; // 중첩 객체 변경
+
+console.log(obj3.a); // 1 (영향 없음)
+console.log(obj3.b.c); // 20 (영향 있음 - 중첩 객체는 참조가 복사됨)
+
+// 깊은 복사 예제
+let obj5 = { a: 1, b: { c: 2 } };
+let obj6 = JSON.parse(JSON.stringify(obj5)); // 깊은 복사
+
+obj6.b.c = 20;
+console.log(obj5.b.c); // 2 (영향 없음)
+console.log(obj6.b.c); // 20
+```
+
+### 11-2-2. 참조에 의한 전달
+
+객체를 가리키는 변수(원본, `person`)를 다른 변수(사본, `copy`)에 할당하면 원본의 참조 값이 복사되어 전달된다. 이를 참조에 의한 전달(pass by reference)이라고 한다.
+
+![참조에 의한 전달](/images/ch11/6.png)
+
+위 그림처럼 원본 `person`을 사본 `copy`에 할당하면 원본 `person`의 참조 값을 복사해서 `copy`에 저장한다. 이때 원본 `person`과 사본 `copy`는 저장된 메모리 주소는 다르지만 동일한 참조 값을 갖는다. 다시 말해, 원본 `person`과 사본 `copy` 모두 동일한 객체를 가리킨다. 이것은 두 개의 식별자가 하나의 객체를 공유한다는 것을 의미한다.
+
+따라서 원본 또는 사본 중 어느 한 쪽에서 객체를 변경(변수에 새로운 객체를 재할당하는 것이 아니라 객체의 프로퍼티 값을 변경하거나 프로퍼티를 추가, 삭제)하면 서로 영향을 주고받는다.
+
+```jsx
+var person = {
+  name: 'Lee',
+};
+
+var copy = person; // 참조 값을 복사 (얕은 복사가 아님)
+
+console.log(copy === person); // true (같은 객체를 가리킴)
+
+copy.name = 'Kim'; // copy를 통해 객체를 변경
+console.log(person.name); // 'Kim' (person도 영향을 받음)
+
+person.address = 'Seoul'; // person을 통해 객체를 변경
+console.log(copy.address); // 'Seoul' (copy도 영향을 받음)
+```
+
+## 결론
+
+결국 "값에 의한 전달"과 "참조에 의한 전달"은 **변수에 저장된 값을 복사해서 전달한다는 점에서 동일**하다.
+
+차이점은 단 하나, **변수에 저장된 값이 원시 값이냐 참조 값이냐**일 뿐이다.
+
+- 원시 값: 실제 값 자체가 복사됨
+- 객체: 참조 값(메모리 주소)이 복사됨
+
+따라서 엄밀히 말하면 자바스크립트에는 "참조에 의한 전달"은 존재하지 않고, **"값에 의한 전달"만 존재**한다고 볼 수 있다.
+
+### 용어에 대한 논쟁
+
+자바스크립트의 이러한 동작 방식을 설명하는 정확한 공식 용어는 존재하지 않는다.
+
+- 어떤 사람들은 "공유에 의한 전달(pass by sharing)"이라고 표현하기도 한다
+- 하지만 이 용어 역시 ECMAScript 사양에 정의된 공식 용어는 아니다
+
+### 이 책의 입장
+
+이 책에서는 전달되는 값의 종류를 명확히 구분하기 위해 다음과 같이 사용한다:
+
+- **"값에 의한 전달(pass by value)"**: 원시 값을 전달하는 경우
+- **"참조에 의한 전달(pass by reference)"**: 객체를 전달하는 경우
+
+단, 자바스크립트에는 포인터(pointer)가 존재하지 않기 때문에, C/C++ 같은 포인터가 존재하는 언어의 "참조에 의한 전달"과는 의미가 정확히 일치하지 않는다는 점에 주의하자.
+
+> **포인터(Pointer)**: 메모리 주소를 직접 다루는 변수. C/C++ 등의 언어에서는 포인터를 통해 메모리를 직접 조작할 수 있지만, 자바스크립트에는 포인터 개념이 없고 참조 값만 존재한다.
+
+### 핵심 요약
+
+```javascript
+// 원시 값 전달: 값 자체가 복사됨
+let a = 10;
+let b = a; // 10이라는 값이 복사됨
+b = 20;
+console.log(a); // 10 (영향 없음)
+
+// 객체 전달: 참조 값(주소)이 복사됨
+let obj1 = { value: 10 };
+let obj2 = obj1; // 참조 값이 복사됨
+obj2.value = 20;
+console.log(obj1.value); // 20 (영향 있음)
+```
+
+**결론**: 둘 다 "값"을 복사하지만, 그 값이 실제 데이터냐 메모리 주소냐의 차이가 있을 뿐이다.
+
+---
+
+## 실습 문제
+
+### 문제: 원시값과 객체의 동작 차이 이해하기
+
+다음 코드의 출력 결과를 예상하고, 왜 그런 결과가 나오는지 설명해보세요.
+
+```jsx
+// 케이스 1: 원시값
+let num1 = 100;
+let num2 = num1;
+num2 = 200;
+
+console.log('num1:', num1);  // ?
+console.log('num2:', num2);  // ?
+console.log('num1 === num2:', num1 === num2);  // ?
+
+// 케이스 2: 객체 - 참조 공유
+let obj1 = { score: 100 };
+let obj2 = obj1;
+obj2.score = 200;
+
+console.log('obj1.score:', obj1.score);  // ?
+console.log('obj2.score:', obj2.score);  // ?
+console.log('obj1 === obj2:', obj1 === obj2);  // ?
+
+// 케이스 3: 객체 - 얕은 복사
+let obj3 = { score: 100, info: { name: 'Alice' } };
+let obj4 = { ...obj3 };
+obj4.score = 200;
+obj4.info.name = 'Bob';
+
+console.log('obj3.score:', obj3.score);  // ?
+console.log('obj3.info.name:', obj3.info.name);  // ?
+console.log('obj4.score:', obj4.score);  // ?
+console.log('obj4.info.name:', obj4.info.name);  // ?
+console.log('obj3 === obj4:', obj3 === obj4);  // ?
+
+// 케이스 4: 객체 - 깊은 복사
+let obj5 = { score: 100, info: { name: 'Alice' } };
+let obj6 = JSON.parse(JSON.stringify(obj5));
+obj6.score = 200;
+obj6.info.name = 'Bob';
+
+console.log('obj5.score:', obj5.score);  // ?
+console.log('obj5.info.name:', obj5.info.name);  // ?
+console.log('obj6.score:', obj6.score);  // ?
+console.log('obj6.info.name:', obj6.info.name);  // ?
+console.log('obj5 === obj6:', obj5 === obj6);  // ?
+```
+
+<details>
+<summary>해답 보기</summary>
+
+**출력 결과:**
+```
+num1: 100
+num2: 200
+num1 === num2: false
+
+obj1.score: 200
+obj2.score: 200
+obj1 === obj2: true
+
+obj3.score: 100
+obj3.info.name: Bob
+obj4.score: 200
+obj4.info.name: Bob
+obj3 === obj4: false
+
+obj5.score: 100
+obj5.info.name: Alice
+obj6.score: 200
+obj6.info.name: Bob
+obj5 === obj6: false
+```
+
+**상세 설명:**
+
+### 케이스 1: 원시값 (값에 의한 전달)
+```jsx
+let num1 = 100;
+let num2 = num1;  // 100이라는 값 자체가 복사됨
+num2 = 200;       // num2만 변경됨
+```
+- `num1`과 `num2`는 **서로 다른 메모리 공간**에 각각의 값을 저장
+- `num2`를 변경해도 `num1`에는 **영향 없음**
+- `num1 === num2`는 `false` (값이 다르므로)
+
+**메모리 구조:**
+```
+num1: [메모리 주소 0x001] → 100
+num2: [메모리 주소 0x002] → 200
+```
+
+---
+
+### 케이스 2: 객체 - 참조 공유 (참조에 의한 전달)
+```jsx
+let obj1 = { score: 100 };
+let obj2 = obj1;  // 참조 값(메모리 주소)이 복사됨
+obj2.score = 200; // 같은 객체를 변경
+```
+- `obj1`과 `obj2`는 **같은 객체를 참조**
+- `obj2`를 통해 객체를 변경하면 `obj1`도 **영향 받음**
+- `obj1 === obj2`는 `true` (같은 객체를 가리킴)
+
+**메모리 구조:**
+```
+obj1: [메모리 주소 0x100] ─┐
+obj2: [메모리 주소 0x100] ─┴→ { score: 200 }
+```
+
+---
+
+### 케이스 3: 객체 - 얕은 복사 (Shallow Copy)
+```jsx
+let obj3 = { score: 100, info: { name: 'Alice' } };
+let obj4 = { ...obj3 };  // 최상위 레벨만 복사
+```
+- **최상위 프로퍼티** (`score`): 값이 복사됨 → 독립적
+- **중첩된 객체** (`info`): 참조가 복사됨 → 공유됨
+
+```
+obj4.score = 200;           // obj3에 영향 없음 (복사본)
+obj4.info.name = 'Bob';     // obj3에 영향 있음 (참조 공유)
+```
+
+**메모리 구조:**
+```
+obj3: { score: 100, info: [주소 0x200] }
+obj4: { score: 200, info: [주소 0x200] }  ← info는 같은 주소
+                             ↓
+                    { name: 'Bob' }  ← 공유되는 객체
+```
+
+---
+
+### 케이스 4: 객체 - 깊은 복사 (Deep Copy)
+```jsx
+let obj5 = { score: 100, info: { name: 'Alice' } };
+let obj6 = JSON.parse(JSON.stringify(obj5));  // 완전히 새로운 객체 생성
+```
+- **모든 레벨**의 객체가 새로 복사됨
+- `obj5`와 `obj6`는 **완전히 독립적**
+- 어느 쪽을 변경해도 **서로 영향 없음**
+
+**메모리 구조:**
+```
+obj5: { score: 100, info: { name: 'Alice' } }
+obj6: { score: 200, info: { name: 'Bob' } }  ← 완전히 별개
+```
+
+---
+
+### 핵심 비교표
+
+| 방식 | 최상위 프로퍼티 | 중첩 객체 | 사용 예시 |
+|------|--------------|----------|----------|
+| **참조 공유** | 영향 있음 ✅ | 영향 있음 ✅ | `let b = a` |
+| **얕은 복사** | 영향 없음 ❌ | 영향 있음 ✅ | `{...obj}`, `Object.assign()` |
+| **깊은 복사** | 영향 없음 ❌ | 영향 없음 ❌ | `JSON.parse(JSON.stringify())`, `structuredClone()` |
+
+---
+
+### 실전 팁
+
+**얕은 복사 방법:**
+
+```jsx
+// 1. 스프레드 연산자 (Spread Operator) - ES6
+let copy1 = { ...original };
+
+// 2. Object.assign() - ES6
+let copy2 = Object.assign({}, original);
+
+// 3. Array.from() - 배열 전용, ES6
+let copy3 = Array.from(original);
+```
+
+**각 방법의 차이점과 사용 시나리오:**
+
+| 방법 | 대상 | 특징 | 사용 시나리오 |
+|------|------|------|--------------|
+| **스프레드 연산자** `{...obj}` | 객체, 배열 | 가장 간결하고 직관적 / 객체/배열 모두 사용 가능 / 열거 가능한 속성만 복사 | 일반적인 객체/배열 복사 / 여러 객체 병합 시 / 가독성이 중요할 때 |
+| **Object.assign()** | 객체 | 여러 객체를 하나로 병합 가능 / 첫 번째 인자를 변경함 / 열거 가능한 속성만 복사 | 여러 소스에서 속성 수집 / 기존 객체에 속성 추가 / IE 지원 필요 시 (polyfill) |
+| **Array.from()** | 배열, 유사배열 | 유사 배열 객체를 진짜 배열로 변환 / mapping 함수 지원 / iterable 객체 변환 | 유사 배열 → 배열 변환 / NodeList, arguments 등 / 변환과 동시에 매핑 필요 시 |
+
+**상세 예제:**
+
+```jsx
+// ===== 1. 스프레드 연산자 =====
+// 장점: 간결하고 직관적
+const obj = { a: 1, b: 2 };
+const arr = [1, 2, 3];
+
+const objCopy = { ...obj };           // 객체 복사
+const arrCopy = [...arr];             // 배열 복사
+const merged = { ...obj, c: 3 };      // 복사하면서 속성 추가
+const combined = { ...obj, ...obj2 }; // 여러 객체 병합
+
+// ===== 2. Object.assign() =====
+// 장점: 여러 소스를 첫 번째 대상에 병합
+const target = { a: 1 };
+const source1 = { b: 2 };
+const source2 = { c: 3 };
+
+Object.assign(target, source1, source2);
+console.log(target); // { a: 1, b: 2, c: 3 } - target이 변경됨!
+
+// 새 객체로 복사하려면 첫 번째 인자를 빈 객체로
+const copy = Object.assign({}, target, source1);
+
+// 같은 속성명이 있으면 뒤의 값이 덮어씀
+const obj1 = { a: 1, b: 2 };
+const obj2 = { b: 3, c: 4 };
+const result = Object.assign({}, obj1, obj2);
+console.log(result); // { a: 1, b: 3, c: 4 } - b가 덮어써짐
+
+// ===== 3. Array.from() =====
+// 장점: 유사 배열 객체를 진짜 배열로 변환
+
+// 예제 1: 유사 배열 객체 변환
+const arrayLike = { 0: 'a', 1: 'b', 2: 'c', length: 3 };
+const realArray = Array.from(arrayLike);
+console.log(realArray); // ['a', 'b', 'c']
+console.log(realArray.map); // function (이제 배열 메서드 사용 가능)
+
+// 예제 2: NodeList 변환 (DOM)
+const nodeList = document.querySelectorAll('div'); // NodeList (유사 배열)
+const divArray = Array.from(nodeList); // 진짜 배열로 변환
+divArray.forEach(div => console.log(div)); // 배열 메서드 사용 가능
+
+// 예제 3: mapping 함수와 함께 사용
+const numbers = Array.from([1, 2, 3], x => x * 2);
+console.log(numbers); // [2, 4, 6]
+
+// 예제 4: 문자열을 배열로
+const str = 'hello';
+const chars = Array.from(str);
+console.log(chars); // ['h', 'e', 'l', 'l', 'o']
+
+// 예제 5: Set이나 Map 변환
+const set = new Set([1, 2, 3]);
+const arrFromSet = Array.from(set);
+console.log(arrFromSet); // [1, 2, 3]
+```
+
+**실전 사용 가이드:**
+
+```jsx
+// ✅ 일반적인 객체 복사: 스프레드 연산자 사용
+const userCopy = { ...user };
+
+// ✅ 여러 객체를 하나로 합칠 때
+const config = { ...defaultConfig, ...userConfig };
+
+// ✅ 배열 복사: 스프레드 연산자 (간결함)
+const itemsCopy = [...items];
+
+// ✅ 기존 객체를 변경하면서 속성 추가: Object.assign()
+Object.assign(user, { lastLogin: new Date() });
+
+// ✅ 여러 소스의 속성을 수집: Object.assign()
+const merged = Object.assign({}, defaults, options, overrides);
+
+// ✅ DOM NodeList를 배열로: Array.from()
+const buttons = Array.from(document.querySelectorAll('button'));
+buttons.forEach(btn => btn.addEventListener('click', handler));
+
+// ✅ 유사 배열 객체를 배열로: Array.from()
+function sum() {
+  const args = Array.from(arguments); // arguments는 유사 배열
+  return args.reduce((a, b) => a + b, 0);
+}
+
+// ✅ 변환하면서 매핑: Array.from()
+const doubled = Array.from([1, 2, 3], x => x * 2); // [2, 4, 6]
+```
+
+**주의사항:**
+
+```jsx
+// ⚠️ 모두 얕은 복사만 수행
+const original = { a: 1, nested: { b: 2 } };
+const copy1 = { ...original };
+const copy2 = Object.assign({}, original);
+
+copy1.nested.b = 999;
+console.log(original.nested.b); // 999 - 중첩 객체는 공유됨!
+
+// ⚠️ Object.assign()은 첫 번째 인자를 변경함
+const target = { a: 1 };
+Object.assign(target, { b: 2 });
+console.log(target); // { a: 1, b: 2 } - target이 변경됨
+
+// ⚠️ Array.from()은 배열/유사배열/iterable에만 사용
+const obj = { a: 1, b: 2 };
+Array.from(obj); // [] - 빈 배열 반환 (iterable이 아니므로)
+```
+
+**깊은 복사 방법:**
+```jsx
+// 1. JSON 방식 (가장 간단, 하지만 함수/Symbol/undefined는 복사 안됨)
+let deepCopy1 = JSON.parse(JSON.stringify(original));
+
+// 2. structuredClone() (최신 방법, 대부분의 타입 지원)
+let deepCopy2 = structuredClone(original);
+
+// 3. 재귀 함수 (커스텀 구현)
+function deepClone(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+
+  const copy = Array.isArray(obj) ? [] : {};
+
+  for (let key in obj) {
+    copy[key] = deepClone(obj[key]);
+  }
+  return copy;
+}
+```
+
+**주의사항:**
+- `JSON.parse(JSON.stringify())`는 함수, `undefined`, `Symbol` 등을 복사하지 못함
+- 순환 참조(circular reference)가 있는 객체는 에러 발생
+- `structuredClone()`은 비교적 최신 API (Node.js 17+, 모던 브라우저)
+
+</details>

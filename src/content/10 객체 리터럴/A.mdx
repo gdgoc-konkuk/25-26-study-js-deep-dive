@@ -1,0 +1,465 @@
+# 10장 객체 리터럴
+
+## 10-1. 객체란?
+
+객체는 자바스크립트의 중요한 데이터 타입 중 하나로, 여러 값을 하나의 단위로 묶어서 관리할 수 있다. 변경 불가능한 원시 값과 다르게 변경 가능한 값이다.
+또한 0개 이상의 프로퍼티로 구성되며, 프로퍼티는 키와 값으로 이루어진다.
+
+![객체 리터럴](/images/ch10/1.png)
+
+자바스크립트에서 사용할 수 있는 모든 값은 프로퍼티 값이 될 수 있다. 자바스크립트의 함수는 일급 객체이므로 값으로 취급할 수 있다. 따라서 함수도 프로퍼티 값으로 사용할 수 있다. 프로퍼티 값이 함수일 경우, 일반 함수와 구분하기 위해 **메서드(method)**라고 부른다.
+
+**객체의 구성 요소**
+
+- **프로퍼티(Property)**: 객체의 상태를 나타내는 값
+- **메서드(Method)**: 프로퍼티를 참조하고 조작할 수 있는 동작
+
+이처럼 객체는 상태와 동작을 하나의 단위로 구조화할 수 있어 유용하다.
+
+## 10-2. 객체 리터럴에 의한 객체 생성
+
+자바스크립트는 여러 가지 객체 생성 방법을 지원한다.
+
+- 객체 리터럴
+- Object 생성자 함수
+- 생성자 함수
+- Object.create 메서드
+- 클래스(ES6)
+
+가장 간단하고 일반적인 방법은 **객체 리터럴**을 사용하는 것이다.
+
+```jsx
+// 객체 리터럴에 의한 객체 생성
+var person = {
+  name: 'Lee',
+  sayHello: function () {
+    console.log('Hello! ' + this.name);
+  },
+};
+
+console.log(typeof person); // object
+console.log(person); // { name: 'Lee', sayHello: [Function: sayHello] }
+```
+
+**중요한 차이점**
+
+객체 리터럴의 중괄호(`{}`)는 코드 블록을 의미하지 않는다는 점에 주의하자.
+
+| 구분        | 중괄호 의미 | 세미콜론 | 예시             |
+| ----------- | ----------- | -------- | ---------------- |
+| 코드 블록   | 실행 영역   | 불필요   | `if (true) { }`  |
+| 객체 리터럴 | 값(표현식)  | 필요     | `var obj = { };` |
+
+## 10-3. 프로퍼티
+
+프로퍼티는 키와 값으로 이루어진다. 프로퍼티 키는 문자열 또는 심벌이어야 하며, 자바스크립트 엔진은 프로퍼티 키가 문자열이 아닌 경우 암묵적으로 문자열로 타입 변환한다. 프로퍼티 값은 자바스크립트에서 사용할 수 있는 모든 값이 될 수 있다.
+
+```jsx
+var person = {
+  //프로퍼티 키는 문자열 또는 심벌이어야 한다.
+  name: 'Lee', //프로퍼티 값은 자바스크립트에서 사용할 수 있는 모든 값이 될 수 있다.
+  age: 20,
+  isStudent: true,
+  score: [90, 80, 85],
+  address: {
+    city: 'Seoul',
+    street: 'Gangnam-daero',
+  },
+  sayHello: function () {
+    console.log('Hello! ' + this.name);
+  },
+};
+```
+
+**식별자 네이밍 규칙과 프로퍼티 키**
+
+프로퍼티 키는 반드시 식별자 네이밍 규칙을 따를 필요는 없다. 하지만 규칙 준수 여부에 따라 사용 방법이 달라진다.
+
+```jsx
+var person = {
+  name: 'Lee', // 식별자 네이밍 규칙 준수 ✅
+  'first-name': 'Ung-mo', // 식별자 네이밍 규칙 미준수 (하이픈 포함)
+  age: 20,
+  1: 'one', // 숫자로 시작 (자동으로 문자열 "1"로 변환)
+};
+```
+
+| 규칙 준수 | 따옴표    | 접근 방법                | 예시                   |
+| --------- | --------- | ------------------------ | ---------------------- |
+| 준수 ✅   | 생략 가능 | 점 표기법, 대괄호 표기법 | `person.name`          |
+| 미준수 ❌ | 필수      | 대괄호 표기법만          | `person['first-name']` |
+
+```jsx
+console.log(person.name); // 'Lee' (점 표기법)
+console.log(person['first-name']); // 'Ung-mo' (대괄호 표기법)
+// console.log(person.first-name); // NaN (person.first - person.name으로 해석됨)
+
+console.log(person[1]); // 'one' (숫자는 따옴표 없이 사용 가능)
+console.log(person['1']); // 'one' (문자열로 자동 변환)
+```
+
+**권장사항:** 번거로움을 피하기 위해 식별자 네이밍 규칙을 준수하는 프로퍼티 키를 사용하는 것이 일반적이다.
+
+또한 문자열 또는 문자열로 평가할 수 있는 표현식을 사용해 프로퍼티 키를 동적으로 생성할 수도 있다. 이 경우에는 프로퍼티 키로 사용할 표현식을 대괄호(`[...]`)로 묶어야 한다.
+
+```jsx
+var propKey = 'age';
+var person = {
+  name: 'Lee',
+  [propKey]: 20, //프로퍼티 키 동적 생성
+};
+console.log(person.age); //20
+```
+
+**프로퍼티 키 중복**
+
+이미 존재하는 프로퍼티 키를 중복 선언하면 나중에 선언한 프로퍼티가 먼저 선언한 프로퍼티를 덮어쓴다. 이때 에러가 발생하지 않는다는 점에 주의하자.
+
+```jsx
+var person = {
+  name: 'Lee',
+  name: 'Kim', // 중복 선언 - 에러 없이 덮어씀
+};
+console.log(person.name); // 'Kim' (마지막 값으로 덮어씀)
+
+// 프로퍼티 개수 확인
+console.log(Object.keys(person)); // ['name'] (중복이 아닌 하나만 존재)
+```
+
+> **주의:** 프로퍼티 키 중복은 의도치 않은 동작을 발생시킬 수 있으므로 피하는 것이 좋다.
+
+## 10-4. 메서드
+
+메서드(method)는 객체에 묶여 있는 함수를 의미한다. 프로퍼티 값이 함수인 경우, 일반 함수와 구분하기 위해 메서드라고 부른다.
+
+```jsx
+var person = {
+  name: 'Lee',
+  // 메서드: 객체의 프로퍼티 값으로 함수를 할당
+  sayHello: function () {
+    console.log('Hello! ' + this.name);
+  },
+  sayGoodbye: function () {
+    console.log('Goodbye! ' + this.name);
+  },
+};
+
+person.sayHello(); // 'Hello! Lee'
+person.sayGoodbye(); // 'Goodbye! Lee'
+```
+
+**메서드와 일반 함수의 차이**
+
+| 구분        | 메서드               | 일반 함수             |
+| ----------- | -------------------- | --------------------- |
+| 정의 위치   | 객체의 프로퍼티      | 독립적으로 존재       |
+| this 바인딩 | 메서드를 호출한 객체 | 호출 방식에 따라 결정 |
+| 사용 목적   | 객체의 상태 조작     | 독립적인 기능 수행    |
+
+```jsx
+// 일반 함수
+function sayHello() {
+  console.log('Hello!');
+}
+sayHello(); // 'Hello!'
+
+// 메서드는 객체의 상태(프로퍼티)를 참조하고 변경할 수 있음
+var counter = {
+  count: 0,
+  increase: function () {
+    this.count++;
+  },
+  getCount: function () {
+    return this.count;
+  },
+};
+
+counter.increase();
+console.log(counter.getCount()); // 1
+```
+
+## 10-5. 프로퍼티 접근
+
+프로퍼티에 접근하는 방법에는 점 표기법과 대괄호 표기법이 있다.
+
+```jsx
+var person = {
+  name: 'Lee',
+  age: 20,
+};
+
+//점 표기법
+console.log(person.name); // 'Lee'
+console.log(person.age); // 20
+
+//대괄호 표기법
+console.log(person['name']); // 'Lee'
+console.log(person['age']); // 20
+```
+
+**대괄호 표기법 사용 규칙**
+
+대괄호 프로퍼티 접근 연산자 내부에 지정하는 프로퍼티 키는 반드시 **따옴표로 감싼 문자열**이어야 한다. 따옴표로 감싸지 않으면 자바스크립트 엔진은 식별자로 해석한다.
+
+```jsx
+var person = {
+  name: 'Lee',
+  age: 20,
+};
+
+// ❌ 따옴표 없이 사용 - 식별자로 해석됨
+console.log(person[name]); // ReferenceError: name is not defined
+
+// ✅ 따옴표로 감싸서 사용 - 프로퍼티 키로 해석됨
+console.log(person['name']); // 'Lee'
+
+// 변수에 저장된 문자열을 프로퍼티 키로 사용
+var propKey = 'name';
+console.log(person[propKey]); // 'Lee' (propKey 변수의 값인 'name'을 키로 사용)
+```
+
+**에러 발생 이유**
+
+`person[name]`에서 `name`은 따옴표가 없으므로 변수로 해석된다. 하지만 선언된 `name` 변수가 없어 ReferenceError가 발생한다.
+
+객체에 존재하지 않는 프로퍼티에 접근하면 undefined를 반환한다. 이때 ReferenceError가 발생하지 않는다는 점에 주의하자.
+
+```jsx
+var person = {
+  name: 'Lee',
+  age: 20,
+};
+
+console.log(person.address); // undefined
+```
+
+## 10-6. 프로퍼티 값 갱신
+
+프로퍼티 값은 언제든지 갱신할 수 있다. 점 표기법과 대괄호 표기법 모두 프로퍼티 값을 갱신하는 데 사용할 수 있다.
+
+```jsx
+var person = {
+  name: 'Lee',
+  age: 20,
+};
+
+person.name = 'Kim'; // 점 표기법
+person['age'] = 30; // 대괄호 표기법
+
+console.log(person); // { name: 'Kim', age: 30 }
+```
+
+## 10-7. 프로퍼티 동적 생성
+
+존재하지 않는 프로퍼티에 값을 할당하면 해당 프로퍼티가 동적으로 생성된다. 점 표기법과 대괄호 표기법 모두 프로퍼티를 동적으로 생성하는 데 사용할 수 있다.
+
+```jsx
+var person = {
+  name: 'Lee',
+  age: 20,
+};
+
+person.address = 'Seoul'; // 점 표기법
+person['phone'] = '010-1234-5678'; // 대괄호 표기법
+
+console.log(person); // { name: 'Lee', age: 20, address: 'Seoul', phone: '010-1234-5678' }
+```
+
+## 10-8. 프로퍼티 삭제
+
+`delete` 연산자를 사용하여 객체의 프로퍼티를 삭제할 수 있다.
+
+```jsx
+var person = {
+  name: 'Lee',
+  age: 20,
+};
+
+delete person.age; // age 프로퍼티 삭제
+console.log(person); // { name: 'Lee' }
+
+// 존재하지 않는 프로퍼티 삭제 시도 - 에러 없이 무시됨
+delete person.address;
+console.log(person); // { name: 'Lee' }
+
+// 삭제된 프로퍼티 접근
+console.log(person.age); // undefined
+```
+
+**delete 연산자의 성능 이슈**
+
+`delete` 연산자는 객체의 [히든 클래스(Hidden Class)](https://richardartoul.github.io/jekyll/update/2015/04/26/hidden-classes.html) 구조를 변경하여 성능 최적화를 방해할 수 있다.
+
+| 방법                   | 프로퍼티 존재         | 성능 | 사용 시기          |
+| ---------------------- | --------------------- | ---- | ------------------ |
+| `delete obj.prop`      | 삭제됨                | 느림 | 일반적인 경우      |
+| `obj.prop = undefined` | 존재 (값만 undefined) | 빠름 | 성능이 중요한 경우 |
+
+```jsx
+var obj1 = { a: 1, b: 2 };
+var obj2 = { a: 1, b: 2 };
+
+// 방법 1: delete 연산자 (프로퍼티 자체를 삭제)
+delete obj1.b;
+console.log('b' in obj1); // false (프로퍼티가 존재하지 않음)
+console.log(obj1.b); // undefined
+
+// 방법 2: undefined 할당 (프로퍼티는 유지, 값만 변경)
+obj2.b = undefined;
+console.log('b' in obj2); // true (프로퍼티는 존재함)
+console.log(obj2.b); // undefined
+```
+
+> **권장사항:** 성능이 중요한 경우 `undefined`를 할당하는 방식을, 명확한 삭제가 필요한 경우 `delete` 연산자를 사용한다.
+
+## 10-9. ES6에서 추가된 객체 리터럴 기능
+
+### 10-9-1. 프로퍼티 축약 표현
+
+ES6에서는 변수 이름과 프로퍼티 키가 동일한 경우, 프로퍼티 키를 생략할 수 있다.
+
+```jsx
+// ES5: 프로퍼티 키와 값을 모두 작성
+var name = 'Lee';
+var age = 20;
+
+var person = {
+  name: name,
+  age: age,
+};
+
+// ES6: 프로퍼티 축약 표현
+const name2 = 'Kim';
+const age2 = 30;
+
+const person2 = {
+  name2, // name2: name2와 동일
+  age2, // age2: age2와 동일
+};
+
+console.log(person); // { name: 'Lee', age: 20 }
+console.log(person2); // { name2: 'Kim', age2: 30 }
+```
+
+**실용적인 활용 예제:**
+
+```jsx
+// 함수의 파라미터를 객체로 반환할 때 유용
+function createUser(name, age, email) {
+  return {
+    name, // name: name
+    age, // age: age
+    email, // email: email
+  };
+}
+
+const user = createUser('Alice', 25, 'alice@example.com');
+console.log(user); // { name: 'Alice', age: 25, email: 'alice@example.com' }
+```
+
+### 10-9-2. 메서드 축약 표현
+
+ES6에서는 메서드를 정의할 때 `function` 키워드를 생략할 수 있다.
+
+```jsx
+// ES5: function 키워드 사용
+var person = {
+  name: 'Lee',
+  sayHello: function () {
+    console.log('Hello! ' + this.name);
+  },
+};
+
+// ES6: 메서드 축약 표현
+const person2 = {
+  name: 'Kim',
+  sayHello() {
+    // function 키워드 생략
+    console.log('Hello! ' + this.name);
+  },
+  sayGoodbye() {
+    console.log('Goodbye! ' + this.name);
+  },
+};
+
+person.sayHello(); // 'Hello! Lee'
+person2.sayHello(); // 'Hello! Kim'
+person2.sayGoodbye(); // 'Goodbye! Kim'
+```
+
+**주의사항**
+
+ES6의 메서드 축약 표현으로 정의한 메서드는 프로퍼티에 할당한 함수와 다르게 동작한다.
+
+| 구분        | ES5 방식                | ES6 축약 표현 |
+| ----------- | ----------------------- | ------------- |
+| 작성법      | `method: function() {}` | `method() {}` |
+| 생성자 사용 | 가능 (`new` 사용)       | 불가능        |
+| prototype   | 있음                    | 없음          |
+| super       | 사용 불가               | 사용 가능     |
+
+> 자세한 내용은 26.2절 "메서드"에서 다룬다.
+
+### 10-9-3. 계산된 프로퍼티 이름
+
+대괄호(`[...]`) 안에 표현식을 넣어 프로퍼티 키를 동적으로 생성할 수 있다.
+
+**ES5 방식:**
+
+ES5에서는 객체 리터럴 외부에서만 계산된 프로퍼티 이름을 사용할 수 있다.
+
+```jsx
+// ES5: 객체 생성 후 프로퍼티 추가
+var prefix = 'prop';
+var i = 1;
+var obj = {};
+
+obj[prefix + i] = i; // prop1: 1
+obj[prefix + ++i] = i; // prop2: 2
+obj[prefix + ++i] = i; // prop3: 3
+
+console.log(obj); // { prop1: 1, prop2: 2, prop3: 3 }
+```
+
+**ES6 방식**
+
+ES6에서는 객체 리터럴 내부에서도 계산된 프로퍼티 이름을 사용할 수 있다.
+
+```jsx
+// ES6: 객체 리터럴 내부에서 계산된 프로퍼티 이름 사용
+const prefix = 'prop';
+let i = 0;
+const obj = {
+  [`${prefix}${++i}`]: i, // prop1: 1
+  [`${prefix}${++i}`]: i, // prop2: 2
+  [`${prefix}-${++i}`]: i, // prop-3: 3
+};
+
+console.log(obj); // { prop1: 1, prop2: 2, 'prop-3': 3 }
+```
+
+**실용적인 활용 예제**
+
+```jsx
+// 동적으로 키를 생성하는 경우
+const status = 'active';
+const count = 5;
+
+const stats = {
+  [`${status}Count`]: count, // activeCount: 5
+  [`${status}Percent`]: count * 100, // activePercent: 500
+};
+
+console.log(stats); // { activeCount: 5, activePercent: 500 }
+
+// 배열을 순회하며 객체 생성
+const keys = ['name', 'age', 'email'];
+const values = ['Alice', 25, 'alice@example.com'];
+
+const user = keys.reduce((obj, key, index) => {
+  obj[key] = values[index];
+  return obj;
+}, {});
+
+console.log(user); // { name: 'Alice', age: 25, email: 'alice@example.com' }
+```
