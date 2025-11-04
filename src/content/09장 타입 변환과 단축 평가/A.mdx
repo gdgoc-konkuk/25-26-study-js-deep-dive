@@ -414,3 +414,183 @@ console.log(setPort(3000)); // 3000
 console.log(setPort(0)); // 0 (포트 0도 유효한 값)
 console.log(setPort(null)); // 8080
 ```
+
+## 실습 문제
+
+### 문제 1. 객체의 형변환 - 기초편
+
+**ToPrimitive 알고리즘 이해하기**
+
+자바스크립트는 객체를 원시 타입으로 변환할 때 **ToPrimitive** 알고리즘을 사용합니다. 이 알고리즘은 **hint**(변환할 타입의 힌트)에 따라 `toString()`과 `valueOf()` 메서드를 다른 순서로 호출합니다.
+
+**Hint 타입과 호출 순서:**
+
+| Hint | 호출 순서 | 사용되는 상황 |
+|------|----------|-------------|
+| `"string"` | `toString()` → `valueOf()` | `String(obj)`, 템플릿 리터럴 |
+| `"number"` | `valueOf()` → `toString()` | `Number(obj)`, 산술 연산자(`*`, `-`, `/`) |
+| `"default"` | `valueOf()` → `toString()` | `+` 연산자, `==` 비교 |
+
+다음 코드의 출력 결과를 예상해보세요:
+
+```jsx
+var obj = {
+  toString: function() {
+    return '42';
+  },
+  valueOf: function() {
+    return 7;
+  }
+};
+
+console.log(obj + '1');      // ?
+console.log(obj + 1);        // ?
+console.log(obj * 2);        // ?
+console.log(String(obj));    // ?
+console.log(Number(obj));    // ?
+```
+
+<details>
+<summary>해답 보기</summary>
+
+**출력 결과:**
+```
+71
+8
+14
+"42"
+7
+```
+
+**상세 분석:**
+
+1. **`obj + '1'` → "71"**
+   - `+` 연산자 + 문자열 피연산자 → hint: `"default"` (하지만 문자열 우선)
+   - `toString()` 호출 → '42' 반환
+   - `'42' + '1'` = "71" (문자열 연결)
+
+2. **`obj + 1` → 8**
+   - `+` 연산자 + 숫자 피연산자 → hint: `"default"`
+   - `valueOf()` 호출 → 7 반환
+   - `7 + 1` = 8 (산술 연산)
+
+3. **`obj * 2` → 14**
+   - 곱셈 연산자 → hint: `"number"`
+   - `valueOf()` 호출 → 7 반환
+   - `7 * 2` = 14
+
+4. **`String(obj)` → "42"**
+   - 명시적 문자열 변환 → hint: `"string"`
+   - `toString()` 호출 → '42' 반환
+
+5. **`Number(obj)` → 7**
+   - 명시적 숫자 변환 → hint: `"number"`
+   - `valueOf()` 호출 → 7 반환
+
+</details>
+
+---
+
+### 문제 2. 객체의 형변환 - 실전편
+
+**Symbol.toPrimitive로 완전한 제어하기**
+
+문제 1에서는 `toString()`과 `valueOf()`를 별도로 정의했습니다. 하지만 `Symbol.toPrimitive` 메서드를 사용하면 hint 값에 따라 **하나의 메서드에서** 모든 변환을 제어할 수 있습니다.
+
+**우선순위:** `Symbol.toPrimitive` > `toString()`/`valueOf()`
+
+이제 실무에서 사용할 법한 예제로 연습해봅시다. 다음 요구사항을 만족하는 `User` 객체를 작성하세요:
+
+```jsx
+var user = {
+  name: 'Alice',
+  age: 25,
+  points: 1500,
+  [Symbol.toPrimitive](hint) {
+    // TODO: 구현하세요
+    // hint === 'string': 이름 반환
+    // hint === 'number': 포인트 반환
+    // hint === 'default': "이름 (나이세)" 형식 반환
+  }
+};
+
+// 테스트 케이스
+console.log(`사용자: ${user}`);           // "사용자: Alice"
+console.log(user + '님 환영합니다');       // "Alice (25세)님 환영합니다"
+console.log(user + 500);                  // "Alice (25세)500"
+console.log(user * 2);                    // 3000
+console.log(String(user));                // "Alice"
+console.log(Number(user));                // 1500
+```
+
+<details>
+<summary>해답 보기</summary>
+
+```jsx
+var user = {
+  name: 'Alice',
+  age: 25,
+  points: 1500,
+  [Symbol.toPrimitive](hint) {
+    if (hint === 'string') {
+      return this.name;
+    }
+    if (hint === 'number') {
+      return this.points;
+    }
+    // hint === 'default'
+    return `${this.name} (${this.age}세)`;
+  }
+};
+```
+
+**실행 결과:**
+```
+사용자: Alice
+Alice (25세)님 환영합니다
+Alice (25세)500
+3000
+Alice
+1500
+```
+
+**각 케이스 분석:**
+
+1. **`` `사용자: ${user}` ``** → "사용자: Alice"
+   - 템플릿 리터럴 → hint: `"string"`
+   - `this.name` 반환
+
+2. **`user + '님 환영합니다'`** → "Alice (25세)님 환영합니다"
+   - `+` 연산자 + 문자열 → hint: `"default"`
+   - `"Alice (25세)"` 반환
+
+3. **`user + 500`** → "Alice (25세)500"
+   - `+` 연산자 (default 상황) → hint: `"default"`
+   - `"Alice (25세)"` + 500 = "Alice (25세)500" (문자열 연결)
+
+4. **`user * 2`** → 3000
+   - 곱셈 연산자 → hint: `"number"`
+   - `this.points` (1500) 반환 → 1500 * 2 = 3000
+
+5. **`String(user)`** → "Alice"
+   - 명시적 변환 → hint: `"string"`
+
+6. **`Number(user)`** → 1500
+   - 명시적 변환 → hint: `"number"`
+
+**핵심 포인트:**
+- `Symbol.toPrimitive`는 단일 메서드로 모든 형변환을 제어
+- hint 값에 따라 적절한 값을 반환하여 다양한 상황에 대응
+- 더 직관적이고 유지보수하기 쉬운 코드 작성 가능
+
+</details>
+
+---
+
+**학습 정리:**
+- **문제 1**: `toString()`/`valueOf()` 오버라이딩으로 ToPrimitive 알고리즘의 기본 동작 이해
+- **문제 2**: `Symbol.toPrimitive`로 hint를 직접 받아 더 세밀한 제어 구현
+
+**참고 자료:**
+- [객체를 원시형으로 변환하기](https://ko.javascript.info/object-toprimitive)
+- [Symbol.toPrimitive - MDN](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toPrimitive)

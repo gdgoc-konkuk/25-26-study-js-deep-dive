@@ -210,3 +210,333 @@ console.log(obj1.value); // 20 (영향 있음)
 ```
 
 **결론**: 둘 다 "값"을 복사하지만, 그 값이 실제 데이터냐 메모리 주소냐의 차이가 있을 뿐이다.
+
+---
+
+## 실습 문제
+
+### 문제: 원시값과 객체의 동작 차이 이해하기
+
+다음 코드의 출력 결과를 예상하고, 왜 그런 결과가 나오는지 설명해보세요.
+
+```jsx
+// 케이스 1: 원시값
+let num1 = 100;
+let num2 = num1;
+num2 = 200;
+
+console.log('num1:', num1);  // ?
+console.log('num2:', num2);  // ?
+console.log('num1 === num2:', num1 === num2);  // ?
+
+// 케이스 2: 객체 - 참조 공유
+let obj1 = { score: 100 };
+let obj2 = obj1;
+obj2.score = 200;
+
+console.log('obj1.score:', obj1.score);  // ?
+console.log('obj2.score:', obj2.score);  // ?
+console.log('obj1 === obj2:', obj1 === obj2);  // ?
+
+// 케이스 3: 객체 - 얕은 복사
+let obj3 = { score: 100, info: { name: 'Alice' } };
+let obj4 = { ...obj3 };
+obj4.score = 200;
+obj4.info.name = 'Bob';
+
+console.log('obj3.score:', obj3.score);  // ?
+console.log('obj3.info.name:', obj3.info.name);  // ?
+console.log('obj4.score:', obj4.score);  // ?
+console.log('obj4.info.name:', obj4.info.name);  // ?
+console.log('obj3 === obj4:', obj3 === obj4);  // ?
+
+// 케이스 4: 객체 - 깊은 복사
+let obj5 = { score: 100, info: { name: 'Alice' } };
+let obj6 = JSON.parse(JSON.stringify(obj5));
+obj6.score = 200;
+obj6.info.name = 'Bob';
+
+console.log('obj5.score:', obj5.score);  // ?
+console.log('obj5.info.name:', obj5.info.name);  // ?
+console.log('obj6.score:', obj6.score);  // ?
+console.log('obj6.info.name:', obj6.info.name);  // ?
+console.log('obj5 === obj6:', obj5 === obj6);  // ?
+```
+
+<details>
+<summary>해답 보기</summary>
+
+**출력 결과:**
+```
+num1: 100
+num2: 200
+num1 === num2: false
+
+obj1.score: 200
+obj2.score: 200
+obj1 === obj2: true
+
+obj3.score: 100
+obj3.info.name: Bob
+obj4.score: 200
+obj4.info.name: Bob
+obj3 === obj4: false
+
+obj5.score: 100
+obj5.info.name: Alice
+obj6.score: 200
+obj6.info.name: Bob
+obj5 === obj6: false
+```
+
+**상세 설명:**
+
+### 케이스 1: 원시값 (값에 의한 전달)
+```jsx
+let num1 = 100;
+let num2 = num1;  // 100이라는 값 자체가 복사됨
+num2 = 200;       // num2만 변경됨
+```
+- `num1`과 `num2`는 **서로 다른 메모리 공간**에 각각의 값을 저장
+- `num2`를 변경해도 `num1`에는 **영향 없음**
+- `num1 === num2`는 `false` (값이 다르므로)
+
+**메모리 구조:**
+```
+num1: [메모리 주소 0x001] → 100
+num2: [메모리 주소 0x002] → 200
+```
+
+---
+
+### 케이스 2: 객체 - 참조 공유 (참조에 의한 전달)
+```jsx
+let obj1 = { score: 100 };
+let obj2 = obj1;  // 참조 값(메모리 주소)이 복사됨
+obj2.score = 200; // 같은 객체를 변경
+```
+- `obj1`과 `obj2`는 **같은 객체를 참조**
+- `obj2`를 통해 객체를 변경하면 `obj1`도 **영향 받음**
+- `obj1 === obj2`는 `true` (같은 객체를 가리킴)
+
+**메모리 구조:**
+```
+obj1: [메모리 주소 0x100] ─┐
+obj2: [메모리 주소 0x100] ─┴→ { score: 200 }
+```
+
+---
+
+### 케이스 3: 객체 - 얕은 복사 (Shallow Copy)
+```jsx
+let obj3 = { score: 100, info: { name: 'Alice' } };
+let obj4 = { ...obj3 };  // 최상위 레벨만 복사
+```
+- **최상위 프로퍼티** (`score`): 값이 복사됨 → 독립적
+- **중첩된 객체** (`info`): 참조가 복사됨 → 공유됨
+
+```
+obj4.score = 200;           // obj3에 영향 없음 (복사본)
+obj4.info.name = 'Bob';     // obj3에 영향 있음 (참조 공유)
+```
+
+**메모리 구조:**
+```
+obj3: { score: 100, info: [주소 0x200] }
+obj4: { score: 200, info: [주소 0x200] }  ← info는 같은 주소
+                             ↓
+                    { name: 'Bob' }  ← 공유되는 객체
+```
+
+---
+
+### 케이스 4: 객체 - 깊은 복사 (Deep Copy)
+```jsx
+let obj5 = { score: 100, info: { name: 'Alice' } };
+let obj6 = JSON.parse(JSON.stringify(obj5));  // 완전히 새로운 객체 생성
+```
+- **모든 레벨**의 객체가 새로 복사됨
+- `obj5`와 `obj6`는 **완전히 독립적**
+- 어느 쪽을 변경해도 **서로 영향 없음**
+
+**메모리 구조:**
+```
+obj5: { score: 100, info: { name: 'Alice' } }
+obj6: { score: 200, info: { name: 'Bob' } }  ← 완전히 별개
+```
+
+---
+
+### 핵심 비교표
+
+| 방식 | 최상위 프로퍼티 | 중첩 객체 | 사용 예시 |
+|------|--------------|----------|----------|
+| **참조 공유** | 영향 있음 ✅ | 영향 있음 ✅ | `let b = a` |
+| **얕은 복사** | 영향 없음 ❌ | 영향 있음 ✅ | `{...obj}`, `Object.assign()` |
+| **깊은 복사** | 영향 없음 ❌ | 영향 없음 ❌ | `JSON.parse(JSON.stringify())`, `structuredClone()` |
+
+---
+
+### 실전 팁
+
+**얕은 복사 방법:**
+
+```jsx
+// 1. 스프레드 연산자 (Spread Operator) - ES6
+let copy1 = { ...original };
+
+// 2. Object.assign() - ES6
+let copy2 = Object.assign({}, original);
+
+// 3. Array.from() - 배열 전용, ES6
+let copy3 = Array.from(original);
+```
+
+**각 방법의 차이점과 사용 시나리오:**
+
+| 방법 | 대상 | 특징 | 사용 시나리오 |
+|------|------|------|--------------|
+| **스프레드 연산자** `{...obj}` | 객체, 배열 | 가장 간결하고 직관적 / 객체/배열 모두 사용 가능 / 열거 가능한 속성만 복사 | 일반적인 객체/배열 복사 / 여러 객체 병합 시 / 가독성이 중요할 때 |
+| **Object.assign()** | 객체 | 여러 객체를 하나로 병합 가능 / 첫 번째 인자를 변경함 / 열거 가능한 속성만 복사 | 여러 소스에서 속성 수집 / 기존 객체에 속성 추가 / IE 지원 필요 시 (polyfill) |
+| **Array.from()** | 배열, 유사배열 | 유사 배열 객체를 진짜 배열로 변환 / mapping 함수 지원 / iterable 객체 변환 | 유사 배열 → 배열 변환 / NodeList, arguments 등 / 변환과 동시에 매핑 필요 시 |
+
+**상세 예제:**
+
+```jsx
+// ===== 1. 스프레드 연산자 =====
+// 장점: 간결하고 직관적
+const obj = { a: 1, b: 2 };
+const arr = [1, 2, 3];
+
+const objCopy = { ...obj };           // 객체 복사
+const arrCopy = [...arr];             // 배열 복사
+const merged = { ...obj, c: 3 };      // 복사하면서 속성 추가
+const combined = { ...obj, ...obj2 }; // 여러 객체 병합
+
+// ===== 2. Object.assign() =====
+// 장점: 여러 소스를 첫 번째 대상에 병합
+const target = { a: 1 };
+const source1 = { b: 2 };
+const source2 = { c: 3 };
+
+Object.assign(target, source1, source2);
+console.log(target); // { a: 1, b: 2, c: 3 } - target이 변경됨!
+
+// 새 객체로 복사하려면 첫 번째 인자를 빈 객체로
+const copy = Object.assign({}, target, source1);
+
+// 같은 속성명이 있으면 뒤의 값이 덮어씀
+const obj1 = { a: 1, b: 2 };
+const obj2 = { b: 3, c: 4 };
+const result = Object.assign({}, obj1, obj2);
+console.log(result); // { a: 1, b: 3, c: 4 } - b가 덮어써짐
+
+// ===== 3. Array.from() =====
+// 장점: 유사 배열 객체를 진짜 배열로 변환
+
+// 예제 1: 유사 배열 객체 변환
+const arrayLike = { 0: 'a', 1: 'b', 2: 'c', length: 3 };
+const realArray = Array.from(arrayLike);
+console.log(realArray); // ['a', 'b', 'c']
+console.log(realArray.map); // function (이제 배열 메서드 사용 가능)
+
+// 예제 2: NodeList 변환 (DOM)
+const nodeList = document.querySelectorAll('div'); // NodeList (유사 배열)
+const divArray = Array.from(nodeList); // 진짜 배열로 변환
+divArray.forEach(div => console.log(div)); // 배열 메서드 사용 가능
+
+// 예제 3: mapping 함수와 함께 사용
+const numbers = Array.from([1, 2, 3], x => x * 2);
+console.log(numbers); // [2, 4, 6]
+
+// 예제 4: 문자열을 배열로
+const str = 'hello';
+const chars = Array.from(str);
+console.log(chars); // ['h', 'e', 'l', 'l', 'o']
+
+// 예제 5: Set이나 Map 변환
+const set = new Set([1, 2, 3]);
+const arrFromSet = Array.from(set);
+console.log(arrFromSet); // [1, 2, 3]
+```
+
+**실전 사용 가이드:**
+
+```jsx
+// ✅ 일반적인 객체 복사: 스프레드 연산자 사용
+const userCopy = { ...user };
+
+// ✅ 여러 객체를 하나로 합칠 때
+const config = { ...defaultConfig, ...userConfig };
+
+// ✅ 배열 복사: 스프레드 연산자 (간결함)
+const itemsCopy = [...items];
+
+// ✅ 기존 객체를 변경하면서 속성 추가: Object.assign()
+Object.assign(user, { lastLogin: new Date() });
+
+// ✅ 여러 소스의 속성을 수집: Object.assign()
+const merged = Object.assign({}, defaults, options, overrides);
+
+// ✅ DOM NodeList를 배열로: Array.from()
+const buttons = Array.from(document.querySelectorAll('button'));
+buttons.forEach(btn => btn.addEventListener('click', handler));
+
+// ✅ 유사 배열 객체를 배열로: Array.from()
+function sum() {
+  const args = Array.from(arguments); // arguments는 유사 배열
+  return args.reduce((a, b) => a + b, 0);
+}
+
+// ✅ 변환하면서 매핑: Array.from()
+const doubled = Array.from([1, 2, 3], x => x * 2); // [2, 4, 6]
+```
+
+**주의사항:**
+
+```jsx
+// ⚠️ 모두 얕은 복사만 수행
+const original = { a: 1, nested: { b: 2 } };
+const copy1 = { ...original };
+const copy2 = Object.assign({}, original);
+
+copy1.nested.b = 999;
+console.log(original.nested.b); // 999 - 중첩 객체는 공유됨!
+
+// ⚠️ Object.assign()은 첫 번째 인자를 변경함
+const target = { a: 1 };
+Object.assign(target, { b: 2 });
+console.log(target); // { a: 1, b: 2 } - target이 변경됨
+
+// ⚠️ Array.from()은 배열/유사배열/iterable에만 사용
+const obj = { a: 1, b: 2 };
+Array.from(obj); // [] - 빈 배열 반환 (iterable이 아니므로)
+```
+
+**깊은 복사 방법:**
+```jsx
+// 1. JSON 방식 (가장 간단, 하지만 함수/Symbol/undefined는 복사 안됨)
+let deepCopy1 = JSON.parse(JSON.stringify(original));
+
+// 2. structuredClone() (최신 방법, 대부분의 타입 지원)
+let deepCopy2 = structuredClone(original);
+
+// 3. 재귀 함수 (커스텀 구현)
+function deepClone(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+
+  const copy = Array.isArray(obj) ? [] : {};
+
+  for (let key in obj) {
+    copy[key] = deepClone(obj[key]);
+  }
+  return copy;
+}
+```
+
+**주의사항:**
+- `JSON.parse(JSON.stringify())`는 함수, `undefined`, `Symbol` 등을 복사하지 못함
+- 순환 참조(circular reference)가 있는 객체는 에러 발생
+- `structuredClone()`은 비교적 최신 API (Node.js 17+, 모던 브라우저)
+
+</details>
