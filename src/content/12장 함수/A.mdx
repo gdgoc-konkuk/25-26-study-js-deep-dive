@@ -737,3 +737,118 @@ console.log(increase()); // 2
 함수형프로그래밍(**순수함수&보조함수 조합으로 외부상태 변경을 최소화하여 불변성을 지향하는 패러다임**)은 순수 함수를 통해 **side effect** 를 최대한 억제하여 오류를 피하고 안정성을 높이려는 노력의 일환이다.
 
 자바스크립트는 멀티 패러다임 언어로 객체지향 프로그래밍과 함께 함수형 프로그래밍을 적극적으로 활용하고있다!
+
+## 실습문제
+
+**출력 결과를 예상해보고 그 이유를 말해보자.**
+
+```jsx
+function multiple(x, y) {
+  return;
+  x * y;
+}
+
+console.log(multiple(3, 5));
+```
+
+<details>
+
+<summary>해답</summary>
+
+return 문 옆에 세미콜론이 없다. 하지만 세미콜론 자동 삽입 기능에 의해 세미콜론이 추가된다. 이후 x \* y 는 무시된다. 따라서 undefined 가 반환된다.
+
+</details>
+
+**함수표현식 ↔ 함수선언문 : 변경 예제**
+
+아래 함수 선언문을 함수표현식으로 변경하세요.
+
+```jsx
+function greet(name) {
+  return `안녕, ${name}!`;
+}
+
+function add(x, y) {
+  return x + y;
+}
+
+// TODO: 위 함수를 함수 표현식 형태로 다시 작성해보세요.
+```
+
+<details>
+
+<summary>해답</summary>
+
+```jsx
+// 함수 표현식
+const greet = function (name) {
+  return `안녕, ${name}!`;
+};
+
+const add = function (x, y) {
+  return x + y;
+};
+```
+
+함수 표현식은 변수에 함수를 “값”으로 할당하는 형태로 작성되며,
+
+세미콜론(;)을 붙이는 것이 일반적입니다.
+
+</details>
+
+**실행 결과를 예측해보세요**
+
+```jsx
+console.log(square(3));
+
+function square(x) {
+  return x * x;
+}
+
+console.log(double(3));
+
+var double = function (x) {
+  return x * 2;
+};
+```
+
+<details>
+
+<summary>해답</summary>
+
+```jsx
+9
+TypeError: double is not a function
+```
+
+- `square`는 **함수 선언문**으로 정의되어, 호이스팅 시 전체 함수가 끌어올려져 정상 실행됩니다.
+- `double`은 **함수 표현식**으로, 변수 선언만 호이스팅되어 `undefined` 상태이므로 호출 시 오류가 발생합니다.
+
+</details>
+
+### 콜백함수 연습
+
+```jsx
+function calculate(a, b, callback) {
+  const result = callback(a, b);
+  console.log(`결과: ${result}`);
+}
+
+// TODO: calculate 함수를 호출해서 3 + 4 의 결과가 출력되도록 해보세요.
+// (힌트: 두 수를 더하는 콜백 함수를 직접 전달해야 합니다!)
+```
+
+<details>
+
+<summary>해답</summary>
+
+```jsx
+function calculate(a, b, callback) {
+  const result = callback(a, b);
+  console.log(`결과: ${result}`);
+}
+
+calculate(3, 4, (x, y) => x + y);
+```
+
+</details>
