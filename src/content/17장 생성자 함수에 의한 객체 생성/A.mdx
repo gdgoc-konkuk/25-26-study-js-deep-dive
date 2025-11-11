@@ -159,3 +159,54 @@ console.log(u2.name); // Lee
 | **this**               | 호출 방식에 따라 바인딩 대상이 달라짐     |
 | **new 연산자**         | 인스턴스를 자동으로 반환                  |
 | **스코프 세이프 패턴** | new 없이 호출 시 안전하게 보정            |
+
+### 실습문제
+
+**아래 코드를 보고 각 주석의 `this`가 가리키는 대상을 예측해보세요.**
+
+```jsx
+function whoAmI() {
+  console.log(this.name);
+}
+
+const person = {
+  name: 'SungJong',
+  whoAmI: whoAmI,
+  inner: {
+    name: 'Jiwon',
+    whoAmI: whoAmI,
+  },
+};
+
+// Q1
+whoAmI(); // whoAmI()의 this는 무엇을 가리킬까요?
+
+// Q2
+person.whoAmI(); // person.whoAmI()의 this는 무엇을 가리킬까요?
+
+// Q3
+person.inner.whoAmI(); // person.inner.whoAmI()의 this는 무엇을 가리킬까요?
+
+// Q4
+const newFunc = new whoAmI(); // new whoAmI() 실행 시 this는 무엇을 가리킬까요?
+```
+
+<details>
+
+<summary>해답</summary>
+
+| 번호 | 정답                                          | 해설                                                                                             |
+| ---- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Q1   | **전역 객체 (또는 undefined in strict mode)** | 일반 함수 호출이므로 `this`는 전역 객체(window/globalThis)를 가리킨다.                           |
+| Q2   | **person**                                    | 점 표기법(`obj.func()`)으로 호출되었으므로 `this`는 해당 객체 `person`을 참조한다.               |
+| Q3   | **inner 객체**                                | `person.inner.whoAmI()`에서 `whoAmI`를 소유한 객체는 `inner`이므로, `this`는 `inner`을 참조한다. |
+| Q4   | **새로 생성된 인스턴스**                      | `new` 연산자로 호출 시, 새로운 빈 객체가 생성되고 `this`는 그 인스턴스를 가리킨다.               |
+
+| 호출 방식        | this가 가리키는 대상       |
+| ---------------- | -------------------------- |
+| 일반 함수 호출   | 전역 객체 (또는 undefined) |
+| 메서드 호출      | 메서드를 소유한 객체       |
+| 생성자 함수 호출 | 새로 생성된 인스턴스       |
+| call/apply/bind  | 명시적으로 지정한 객체     |
+
+</details>
