@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "prebuild": "node scripts/generate-pr-data.mjs",
     "build": "next build",
-    "build:search": "next build && pagefind --site out --output-path out/_pagefind",
+    "build:search": "pnpm prebuild && next build && pagefind --site out --output-path out/_pagefind",
     "start": "next start",
     "lint": "eslint",
     "index": "pagefind --site out --output-path out/_pagefind",
-    "deploy": "pnpm build && pnpm index && gh-pages -d out -t true"
+    "deploy": "pnpm build:search && gh-pages -d out -t true"
   },
   "dependencies": {
     "gh-pages": "^6.3.0",
