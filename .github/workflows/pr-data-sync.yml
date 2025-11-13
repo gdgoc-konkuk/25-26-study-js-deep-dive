@@ -1,0 +1,112 @@
+name: Sync PR Data
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches:
+      - main
+  issue_comment:
+    types: [created, edited, deleted]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  contents: write
+  pull-requests: read
+  issues: read
+
+jobs:
+  sync-pr-data:
+    runs-on: ubuntu-latest
+    # issue_comment는 PR과 일반 issue 모두에서 트리거되므로 PR인 경우만 실행
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
+      github.event_name == 'pull_request_review' ||
+      github.event_name == 'pull_request_review_comment'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get PR number
+        id: pr-number
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            echo "PR_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request_review" ]]; then
+            echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fetch PR data from GitHub API
+        id: fetch-pr
+        run: |
+          PR_NUMBER="${{ steps.pr-number.outputs.PR_NUMBER }}"
+
+          # PR 기본 정보 가져오기
+          PR_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}")
+
+          # PR 댓글 가져오기 (issue comments)
+          COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${PR_NUMBER}/comments")
+
+          # PR 리뷰 댓글 가져오기 (review comments on code)
+          REVIEW_COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments")
+
+          # PR 리뷰 가져오기
+          REVIEWS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}/reviews")
+
+          # PR 변경 파일 목록 가져오기
+          FILES=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}/files")
+
+          # 디렉토리 생성
+          mkdir -p src/data/prs
+
+          # JSON 결합
+          echo "{
+            \"pr\": ${PR_DATA},
+            \"comments\": ${COMMENTS},
+            \"reviewComments\": ${REVIEW_COMMENTS},
+            \"reviews\": ${REVIEWS},
+            \"files\": ${FILES},
+            \"lastUpdated\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
+          }" > "src/data/prs/pr-${PR_NUMBER}.json"
+
+          echo "PR data saved to src/data/prs/pr-${PR_NUMBER}.json"
+
+      - name: Commit and push PR data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add src/data/prs/
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update PR data for #${{ steps.pr-number.outputs.PR_NUMBER }}"
+            git push
+          fi

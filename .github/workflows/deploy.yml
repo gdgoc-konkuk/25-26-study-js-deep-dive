@@ -62,19 +62,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      # 7. 프로젝트 빌드 (Next.js 정적 export)
+      # 7. PR 데이터 생성
+      - name: Generate PR data
+        run: pnpm prebuild
+
+      # 8. 프로젝트 빌드 (Next.js 정적 export)
       - name: Build
         run: pnpm build
 
-      # 8. Pagefind 검색 인덱스 생성
+      # 9. Pagefind 검색 인덱스 생성
       - name: Generate search index
         run: pnpm index
 
-      # 9. GitHub Pages 배포 준비
+      # 10. GitHub Pages 배포 준비
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      # 10. 빌드 결과물(artifact) 업로드
+      # 11. 빌드 결과물(artifact) 업로드
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

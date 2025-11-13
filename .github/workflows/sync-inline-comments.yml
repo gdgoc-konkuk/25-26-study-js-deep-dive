@@ -1,0 +1,85 @@
+name: Sync Inline Comments from GitHub Discussions
+
+on:
+  # 매 시간마다 실행
+  schedule:
+    - cron: '0 * * * *'
+  # 수동 트리거 가능
+  workflow_dispatch:
+  # Discussion 이벤트 발생 시 (discussions가 활성화된 경우)
+  discussion:
+    types: [created, edited, deleted]
+  discussion_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  contents: write
+  discussions: read
+
+jobs:
+  sync-inline-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch inline comments from GitHub Discussions
+        id: fetch-discussions
+        run: |
+          # "Inline Comments" 카테고리의 모든 discussions 가져오기
+          DISCUSSIONS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/discussions?per_page=100")
+
+          # 디렉토리 생성
+          mkdir -p src/data/inline-comments
+
+          # 각 discussion을 처리
+          echo "$DISCUSSIONS" | jq -c '.[]' | while read -r discussion; do
+            DISCUSSION_ID=$(echo "$discussion" | jq -r '.number')
+            TITLE=$(echo "$discussion" | jq -r '.title')
+
+            # "Inline Comments" 카테고리만 필터링 (제목이 [Inline]로 시작하는 경우)
+            if [[ "$TITLE" == \[Inline\]* ]]; then
+              # Discussion 댓글 가져오기
+              COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/${{ github.repository }}/discussions/${DISCUSSION_ID}/comments")
+
+              # 페이지 ID 추출 (제목에서 파싱하거나 discussion body에서 추출)
+              PAGE_ID=$(echo "$TITLE" | md5sum | cut -d' ' -f1)
+
+              # JSON 파일 생성
+              echo "{
+                \"discussion\": $discussion,
+                \"comments\": $COMMENTS,
+                \"lastSynced\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
+              }" > "src/data/inline-comments/${PAGE_ID}.json"
+
+              echo "Synced inline comments for discussion #${DISCUSSION_ID}"
+            fi
+          done
+
+          echo "Inline comment sync completed"
+
+      - name: Commit and push inline comment data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add src/data/inline-comments/
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync inline comments from GitHub Discussions"
+            git push
+          fi
