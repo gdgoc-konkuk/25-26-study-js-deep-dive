@@ -171,3 +171,186 @@ console.log(bar.name); // bar
   ```
 
 - `prototype` 프로퍼티는 함수가 객체를 생성하는 생성자 함수로 호출될 때 생성자 함수가 생성할 인스턴스의 프로토타입 객체를 가리킨다.
+
+---
+
+# 퀴즈를 풀어봅시다! 🧐
+
+## Q1. arguments 객체
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+function sum() {
+  let total = 0;
+  for (let i = 0; i < arguments.length; i++) {
+    total += arguments[i];
+  }
+  return total;
+}
+
+console.log(sum(1, 2, 3, 4, 5));
+```
+
+① 15
+
+② `NaN`
+
+③ 1
+
+④ TypeError
+
+<details>
+  - <summary>정답 보기</summary>
+  **정답: ①**
+  <br />
+  `arguments` 객체는 전달된 모든 인수를 담고 있어 가변 인자 함수를 구현할 때
+  유용하다. <br /> 1+2+3+4+5 = 15
+</details>
+
+---
+
+## Q2. length 프로퍼티
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+function foo(x, y) {
+  console.log(foo.length);
+  console.log(arguments.length);
+}
+
+foo(1, 2, 3);
+```
+
+① 2, 2
+
+② 2, 3
+
+③ 3, 3
+
+④ 3, 2
+
+<details>
+- <summary>정답 보기</summary>
+  **정답: ②**
+  <br/>
+  함수 객체의 `length`는 매개변수의 개수(2)이고, `arguments.length`는 실제 전달된 인수의 개수(3)이다.
+
+</details>
+
+---
+
+## Q3. name 프로퍼티
+
+### 다음 코드의 실행 결과는? (ES6 기준)
+
+```jsx
+var namedFunc = function foo() {};
+var anonymousFunc = function () {};
+
+console.log(namedFunc.name);
+console.log(anonymousFunc.name);
+```
+
+① `foo`, `''`
+
+② `foo`, `anonymousFunc`
+
+③ `namedFunc`, `anonymousFunc`
+
+④ `foo`, `undefined`
+
+<details>
+  - <summary>정답 보기</summary>
+  **정답: ②**
+  <br />
+  기명 함수 표현식은 함수 이름을, 익명 함수 표현식은 ES6에서 함수 객체를
+  가리키는 변수 이름을 `name`프로퍼티 값으로 갖는다.
+</details>
+
+---
+
+## Q4. prototype 프로퍼티
+
+### 다음 중 prototype 프로퍼티를 소유하지 않는 것은?
+
+① 함수 선언문
+
+② 함수 표현식
+
+③ 화살표 함수
+
+④ 클래스
+
+<details>
+  - <summary>정답 보기</summary>
+  **정답: ③**
+  <br />
+  `prototype` 프로퍼티는 constructor만 소유한다. 화살표 함수는
+  non-constructor이므로 `prototype` 프로퍼티가 없다.
+</details>
+
+---
+
+## Q5. **proto** 접근자 프로퍼티
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+const obj = { a: 1 };
+
+console.log(obj.hasOwnProperty('a'));
+console.log(obj.hasOwnProperty('__proto__'));
+```
+
+① `true`, `true`
+
+② `true`, `false`
+
+③ `false`, `true`
+
+④ `false`, `false`
+
+<details>
+  - <summary>정답 보기</summary>
+  **정답: ②**
+  <br />
+  a는 `obj` 자신의 프로퍼티지만, `__proto__`는 `Object.prototype`의 프로퍼티를
+  상속받은 것이므로 `obj` 자신의 프로퍼티가 아니다.
+</details>
+
+---
+
+## Q6. 일급 객체의 특징
+
+### 다음 코드가 가능한 이유는?
+
+```jsx
+function makeCounter() {
+  let count = 0;
+  return function () {
+    return ++count;
+  };
+}
+
+const counter = makeCounter();
+console.log(counter()); // 1
+console.log(counter()); // 2
+```
+
+① 함수가 변수에 저장 가능하고 반환값으로 사용 가능하기 때문
+
+② 함수가 호출 가능하기 때문
+
+③ 함수가 객체이기 때문
+
+④ 함수가 프로퍼티를 가질 수 있기 때문
+
+<details>
+  - <summary>정답 보기</summary>
+  **정답: ①**
+  <br />
+  함수가 일급 객체이므로 함수의 반환값으로 사용할 수 있고, 반환된 함수를 변수에
+  저장할 수 있다. 이는 클로저 패턴의 기초가 된다.
+</details>

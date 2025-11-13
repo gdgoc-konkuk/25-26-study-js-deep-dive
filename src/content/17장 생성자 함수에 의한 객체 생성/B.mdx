@@ -452,3 +452,177 @@ console.log(circle.getDiameter());
   const bool = Boolean('true');
   console.log(bool, typeof bool); // true boolean
   ```
+
+  ***
+
+# 퀴즈를 풀어봅시다! 🧐
+
+---
+
+## Q1. this 바인딩
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+function Circle(radius) {
+  this.radius = radius;
+  this.getArea = function () {
+    return Math.PI * this.radius ** 2;
+  };
+}
+
+const circle1 = Circle(5);
+console.log(circle1);
+console.log(radius);
+```
+
+① `Circle { radius: 5, getArea: [Function] }`, ReferenceError
+
+② `undefined`, 5
+
+③ `Circle { radius: 5, getArea: [Function] }`, `undefined`
+
+④ `undefined`, ReferenceError
+
+<details>
+  - <summary>정답 보기</summary>
+  <br />
+  **정답: ②**
+  <br />
+  `new` 연산자 없이 호출하면 일반 함수로 동작하고, `this`는 전역 객체를
+  가리킨다.
+  <br /> `Circle()`은 반환문이 없어 `undefined`를 반환하고, `radius`는 전역
+  변수로 5가 할당된다.
+</details>
+---
+
+## Q2. constructor와 non-constructor
+
+### 다음 중 constructor가 아닌 것은?
+
+① `function foo() {}`
+
+② `const bar = function() {}`
+
+③ `const baz = () => {}`
+
+④ `const obj = { x: function() {} }`의 x
+
+<details>
+  - <summary>정답 보기</summary>
+  <br />
+  ** 정답: ③ **
+  <br />
+  화살표 함수는 non-constructor이다. `new` 연산자와 함께 호출할 수 없다.
+</details>
+---
+
+## Q3. 생성자 함수의 반환
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+function Person(name) {
+  this.name = name;
+  return 100;
+}
+
+const person = new Person('Lee');
+console.log(person);
+```
+
+① 100
+
+② undefined
+
+③ `Person { name: 'Lee' }`
+
+④ `{}`
+
+<details>
+  - <summary>정답 보기</summary>
+  <br />
+  **정답: ③**
+  <br />
+  생성자 함수에서 원시 값을 명시적으로 반환하면 원시 값 반환은 무시되고 `this`가
+  반환된다.
+</details>
+---
+
+## Q4. 내부 메서드
+
+### 다음 설명이 맞으면 O, 틀리면 X를 선택하세요.
+
+```
+"모든 함수 객체는 [[Construct]] 내부 메서드를 가지므로 생성자 함수로 호출할 수 있다."
+```
+
+O / X
+
+<details>
+  - <summary>정답 보기</summary>
+  <br />
+  **정답: X**
+  <br />
+  모든 함수 객체는 `[[Call]]`을 가지지만(callable), 모든 함수가
+  `[[Construct]]`를 가지는 것은 아니다(non-constructor 존재).
+</details>
+---
+
+## Q5. new.target
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+function User(name) {
+  if (!new.target) {
+    return new User(name);
+  }
+  this.name = name;
+}
+
+const user1 = User('Kim');
+const user2 = new User('Lee');
+
+console.log(user1.name, user2.name);
+```
+
+① `undefined`, Lee
+
+② Kim, Lee
+
+③ Kim, `undefined`
+
+④ TypeError
+
+<details>
+  - <summary>정답 보기 </summary>
+  <br />
+  **정답: ②**
+  <br />
+  `new.target`을 사용하면 `new` 연산자 없이 호출해도 재귀 호출로 생성자 함수처럼
+  동작한다.
+  <br />두 경우 모두 정상적으로 인스턴스가 생성된다.
+</details>
+---
+
+## Q6. 빌트인 생성자 함수
+
+### 다음 중 `new`연산자 없이 호출했을 때 원시 타입을 반환하는 것은?
+
+① `Object()`
+
+② `Function()`
+
+③ `String(123)`
+
+④ `Array()`
+
+<details>
+  - <summary>정답 보기</summary>
+  <br />
+  **정답: ③**
+  <br />
+  `String`, `Number`, `Boolean`은 `new`없이 호출하면 원시 타입을 반환한다.
+  <br /> 이는 데이터 타입 변환에 활용된다.
+</details>

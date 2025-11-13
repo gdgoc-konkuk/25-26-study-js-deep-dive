@@ -907,3 +907,192 @@ setCount(5); // 화면도 자동으로 5로 바뀜
 
 - 상태가 바뀌는 것을 결국 사용자에게 보여줄 수 있는 때가 오기 때문에 상태 변화 추적이 필요한 것
 - 비순수 함수를 거듭 쓰게 되면 복잡도가 증가하기 때문에 오류가 발생한 경우 어디서 오류가 발생했는지 찾기도 어려워진다 ㅠㅠ
+
+---
+
+# 퀴즈를 풀어봅시다! 🧐
+
+## Q1. 함수 호이스팅에 대한 설명
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+console.log(add(2, 3));
+console.log(subtract(5, 2));
+
+function add(x, y) {
+  return x + y;
+}
+
+var subtract = function (x, y) {
+  return x - y;
+};
+```
+
+① 5, 3
+
+② 5, TypeError
+
+③ ReferenceError, TypeError
+
+④ 5, `undefined`
+
+<details>
+  <summary>정답 보기</summary>
+  ** 정답: ② **
+  <br />
+  함수 선언문(add)은 함수 호이스팅이 발생해 선언 전에 호출 가능하지만, 함수
+  표현식(subtract)은 변수 호이스팅이 발생해 undefined로 초기화되므로 TypeError가
+  발생한다.
+</details>
+
+---
+
+## Q2. 일급 객체 조건
+
+### 자바스크립트 함수가 일급 객체인 이유가 아닌 것은?
+
+① 무명의 리터럴로 생성할 수 있다.
+
+② 변수나 자료구조에 저장할 수 있다.
+
+③ 함수의 매개변수로 전달할 수 있다.
+
+④ 함수 내부에서만 호출할 수 있다.
+
+<details>
+  <summary>정답 보기</summary>
+  ** 정답: ④ **
+  <br />
+  일급 객체는 어디서든 호출 가능하며, 함수 내부에서만 호출할 수 있다는 제약은
+  일급 객체의 조건이 아니다.
+</details>
+
+---
+
+## Q3. 화살표 함수의 특징
+
+### 화살표 함수에 대한 설명으로 틀린 것은?
+
+① 항상 익명 함수로 정의한다.
+
+② 생성자 함수로 사용할 수 있다.
+
+③ prototype 프로퍼티가 없다.
+
+④ 기존 함수와 this 바인딩 방식이 다르다.
+
+<details>
+  <summary>정답 보기</summary>
+  ** 정답: ② **
+  <br />
+  화살표 함수는 생성자 함수로 사용할 수 없다. `new` 연산자와 함께 호출하면
+  TypeError가 발생한다.
+</details>
+
+---
+
+## Q4. 매개변수와 인수
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+function multiply(x, y) {
+console.log(arguments.length);
+return x \* y;
+}
+
+console.log(multiply(3, 5, 10));
+```
+
+① 2, 15
+
+② 3, 15
+
+③ 3, 150
+
+④ 2, NaN
+
+<details>
+  <summary>정답 보기</summary>
+  ** 정답: ② **
+  <br />
+  `arguments` 객체는 전달된 모든 인수를 담고 있으므로 `length`는 3이다. <br />
+  하지만 함수는 처음 두 매개변수만 사용하므로 결과는 15다.
+</details>
+
+---
+
+## Q5. 순수 함수와 비순수 함수
+
+### 다음 중 순수 함수는?
+
+```jsx
+// ①
+var count = 0;
+function increase() {
+  return ++count;
+}
+
+// ②
+function add(x, y) {
+  return x + y;
+}
+
+// ③
+var person = { name: 'Lee' };
+function changeName(obj, newName) {
+  obj.name = newName;
+}
+
+// ④
+function getRandom() {
+  return Math.random();
+}
+```
+
+① ①번
+
+② ②번
+
+③ ③번
+
+④ ④번
+
+<details>
+  <summary>정답 보기</summary>
+  ** 정답: ② **
+  <br />
+  순수 함수는 외부 상태에 의존하지 않고 외부 상태를 변경하지 않는다. `add`
+  함수만 매개변수에만 의존하며 외부 상태를 변경하지 않는 순수 함수다.
+</details>
+
+---
+
+## Q6. 즉시 실행 함수 (IIFE)
+
+### 다음 코드의 실행 결과는?
+
+```jsx
+var result = (function (a, b) {
+  return a + b;
+})(10, 20);
+
+console.log(result);
+```
+
+① `undefined`
+
+② 30
+
+③ `function`
+
+④ SyntaxError
+
+<details>
+  <summary>정답 보기</summary>
+  ** 정답: ② **
+  <br />
+  즉시 실행 함수는 정의와 동시에 실행되며, 반환값을 변수에 할당할 수 있다.
+  결과는 30이다.
+</details>
