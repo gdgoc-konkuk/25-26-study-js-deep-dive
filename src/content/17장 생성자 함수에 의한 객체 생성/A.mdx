@@ -1,0 +1,212 @@
+# 17장 생성자함수에 의한 객체 생성
+
+### 생성자 함수에 의한 객체 생성
+
+### 17-1 Object 생성자 함수
+
+자바스크립트에서 객체를 생성하는 가장 기본적인 방법은 `Object` 생성자 함수를 사용하는 것이다.
+
+```jsx
+const person = new Object();
+person.name = 'Seokjin';
+person.age = 24;
+
+console.log(person); // { name: 'Seokjin', age: 25 }
+```
+
+- 하지만 이 방식은 매번 프로퍼티를 수동으로 추가해야 하므로, 동일한 구조의 객체를 여러 개 생성할 때 비효율적이다.
+
+### 17-2 생성자 함수
+
+**생성자 함수(Constructor Function)** 는 객체를 생성하기 위한 템플릿 역할을 한다.
+
+```jsx
+function Person(name, age) {
+  this.name = name;
+  this.age = age;
+  this.sayHello = function () {
+    console.log(`안녕, 나는 ${this.name}이야.`);
+  };
+}
+
+const p1 = new Person('Seokjin', 25);
+const p2 = new Person('SungJong', 25);
+
+p1.sayHello(); // 안녕, 나는 Seokjin이야.
+```
+
+**객체 리터럴에 의한 객체 생성 박식의 문제점**
+
+```jsx
+const user1 = { name: 'Kim', age: 20 };
+const user2 = { name: 'Lee', age: 21 };
+const user3 = { name: 'Park', age: 22 };
+```
+
+- 같은 구조를 매번 반복해야 함
+- 객체 간의 일관성 유지 어려움
+- 코드 중복 발생 → 유지보수 어려움
+
+**생성자 함수에 의한 객체 생성 방식의 장점**
+
+- **반복 코드 제거:** 동일한 구조를 쉽게 재사용 가능
+- **캡슐화:** 생성자 내부에 초기화 로직 포함 가능
+- **자동화된 this 바인딩:** `new` 연산자로 호출 시 자동으로 인스턴스에 연결됨
+- **인스턴스 생성 간 일관성 유지**
+
+### this
+
+`this`는 **함수의 호출 방식**에 따라 가리키는 대상이 달라진다.
+
+| 호출 방식        | this가 가리키는 대상                            |
+| ---------------- | ----------------------------------------------- |
+| 일반 함수 호출   | 전역 객체(window 또는 undefined in strict mode) |
+| 메서드 호출      | 해당 메서드를 소유한 객체                       |
+| 생성자 함수 호출 | 새로 생성된 인스턴스                            |
+| call/apply/bind  | 명시적으로 지정한 객체                          |
+
+```jsx
+function showThis() {
+  console.log(this);
+}
+
+showThis(); // window (또는 undefined)
+const obj = { showThis };
+obj.showThis(); // obj
+const inst = new showThis(); // showThis {}
+```
+
+**생성자 함수의 인스턴스 생성과정**
+
+```jsx
+function Person(name) {
+  // 1. 암묵적으로 빈 객체 생성
+  // this = {};
+
+  // 2. this에 프로퍼티 추가
+  this.name = name;
+
+  // 3. this 반환
+  // return this;
+}
+
+const p = new Person('Seokjin');
+console.log(p); // Person { name: 'Seokjin' }
+```
+
+### 실행 순서
+
+1. 빈 객체가 암묵적으로 생성됨
+2. this가 그 객체를 가리키도록 바인딩
+3. 생성자 함수 코드 실행 → this에 프로퍼티 추가
+4. this가 자동 반환됨
+
+**인스턴스 생성과 this 바인딩**
+
+```jsx
+function Car(model) {
+  this.model = model;
+}
+
+const c1 = new Car('Tesla'); // this → 새로 생성된 Car 인스턴스
+const c2 = Car('BMW'); // this → 전역 객체(window)
+
+console.log(c1.model); // Tesla
+console.log(window.model); // BMW
+```
+
+- `new`를 생략하면 this가 전역 객체를 가리키므로, 의도치 않게 전역 변수가 생길 수 있다.
+
+**new 연산자**
+
+`new` 연산자는 생성자 함수를 호출해 **자동으로 인스턴스를 반환**하도록 도와준다.
+
+```jsx
+function Animal(type) {
+  this.type = type;
+}
+
+const dog = new Animal('강아지');
+console.log(dog instanceof Animal); // true
+```
+
+**스코프 세이프 생성자 패턴**
+
+`new` 키워드를 빠뜨려도 안전하게 작동하도록 한 패턴이다.
+
+```jsx
+function User(name) {
+  if (!(this instanceof User)) {
+    return new User(name); // new 누락 시 자동 재호출
+  }
+  this.name = name;
+}
+
+const u1 = new User('Seokjin');
+const u2 = User('Lee'); // new 없이 호출해도 정상 작동
+
+console.log(u1.name); // Seokjin
+console.log(u2.name); // Lee
+```
+
+- `this instanceof User` 를 통해 현재 컨텍스트가 User 인스턴스인지 검사하고, 아니라면 강제로 `new`를 붙여 재호출한다.
+
+| 항목                   | 설명                                      |
+| ---------------------- | ----------------------------------------- |
+| **Object 생성자**      | 기본 생성자 함수, 직접 프로퍼티 추가 필요 |
+| **객체 리터럴**        | 간단하지만 반복 구조엔 부적합             |
+| **생성자 함수**        | 객체 생성 템플릿으로 재사용 가능          |
+| **this**               | 호출 방식에 따라 바인딩 대상이 달라짐     |
+| **new 연산자**         | 인스턴스를 자동으로 반환                  |
+| **스코프 세이프 패턴** | new 없이 호출 시 안전하게 보정            |
+
+### 실습문제
+
+**아래 코드를 보고 각 주석의 `this`가 가리키는 대상을 예측해보세요.**
+
+```jsx
+function whoAmI() {
+  console.log(this.name);
+}
+
+const person = {
+  name: 'SungJong',
+  whoAmI: whoAmI,
+  inner: {
+    name: 'Jiwon',
+    whoAmI: whoAmI,
+  },
+};
+
+// Q1
+whoAmI(); // whoAmI()의 this는 무엇을 가리킬까요?
+
+// Q2
+person.whoAmI(); // person.whoAmI()의 this는 무엇을 가리킬까요?
+
+// Q3
+person.inner.whoAmI(); // person.inner.whoAmI()의 this는 무엇을 가리킬까요?
+
+// Q4
+const newFunc = new whoAmI(); // new whoAmI() 실행 시 this는 무엇을 가리킬까요?
+```
+
+<details>
+
+<summary>해답</summary>
+
+| 번호 | 정답                                          | 해설                                                                                             |
+| ---- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Q1   | **전역 객체 (또는 undefined in strict mode)** | 일반 함수 호출이므로 `this`는 전역 객체(window/globalThis)를 가리킨다.                           |
+| Q2   | **person**                                    | 점 표기법(`obj.func()`)으로 호출되었으므로 `this`는 해당 객체 `person`을 참조한다.               |
+| Q3   | **inner 객체**                                | `person.inner.whoAmI()`에서 `whoAmI`를 소유한 객체는 `inner`이므로, `this`는 `inner`을 참조한다. |
+| Q4   | **새로 생성된 인스턴스**                      | `new` 연산자로 호출 시, 새로운 빈 객체가 생성되고 `this`는 그 인스턴스를 가리킨다.               |
+
+| 호출 방식        | this가 가리키는 대상       |
+| ---------------- | -------------------------- |
+| 일반 함수 호출   | 전역 객체 (또는 undefined) |
+| 메서드 호출      | 메서드를 소유한 객체       |
+| 생성자 함수 호출 | 새로 생성된 인스턴스       |
+| call/apply/bind  | 명시적으로 지정한 객체     |
+
+</details>
