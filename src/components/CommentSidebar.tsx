@@ -129,6 +129,8 @@ export default function CommentSidebar() {
   const [mounted, setMounted] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [currentFilePath, setCurrentFilePath] = useState<string>('');
+  const [relatedPRs, setRelatedPRs] = useState<PRWithComments[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -170,6 +172,7 @@ export default function CommentSidebar() {
         }
 
         setCurrentFilePath(matchedPath);
+        setRelatedPRs(related);
         console.log('[CommentSidebar] related:', related);
 
         const allComments: CommentWithLine[] = [];
@@ -201,10 +204,66 @@ export default function CommentSidebar() {
       });
   }, [pathname]);
 
+  // 실시간 댓글 새로고침 함수
+  const refreshComments = async () => {
+    if (relatedPRs.length === 0) return;
+
+    setIsRefreshing(true);
+    try {
+      // 각 PR의 최신 댓글 가져오기
+      const updatedPRs = await Promise.all(
+        relatedPRs.map(async ({ pr }) => {
+          try {
+            const response = await fetch(`/api/comments/list?prNumber=${pr.number}`);
+            if (!response.ok) throw new Error('Failed to fetch comments');
+            const data = await response.json();
+            return {
+              pr,
+              comments: data.comments,
+            };
+          } catch (error) {
+            console.error(`PR #${pr.number} 댓글 새로고침 실패:`, error);
+            return { pr, comments: [] };
+          }
+        })
+      );
+
+      setRelatedPRs(updatedPRs);
+
+      // 댓글 목록 재구성
+      const allComments: CommentWithLine[] = [];
+      updatedPRs.forEach(({ pr, comments: prComments }) => {
+        prComments.forEach((comment: any) => {
+          allComments.push({
+            ...comment,
+            prNumber: pr.number,
+            prTitle: pr.title,
+            prUrl: pr.url,
+          });
+        });
+      });
+
+      // 라인 번호 순으로 정렬
+      allComments.sort((a, b) => {
+        if (!a.lineNumber) return 1;
+        if (!b.lineNumber) return -1;
+        return a.lineNumber - b.lineNumber;
+      });
+
+      setComments(allComments);
+    } catch (error) {
+      console.error('댓글 새로고침 실패:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleCommentSuccess = () => {
     setShowCommentForm(false);
-    // 댓글 작성 후 GitHub에 반영되려면 시간이 걸리므로
-    // 실시간 업데이트는 GitHub Actions workflow가 실행된 후 가능
+    // 댓글 작성 후 즉시 새로고침
+    setTimeout(() => {
+      refreshComments();
+    }, 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
   };
 
   // 임시로 항상 표시 (디버깅용)
@@ -232,14 +291,25 @@ export default function CommentSidebar() {
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b p-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">💬 PR 댓글 ({comments.length})</h2>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-          >
-            ✕
-          </button>
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold">💬 PR 댓글 ({comments.length})</h2>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              ✕
+            </button>
+          </div>
+          {relatedPRs.length > 0 && (
+            <button
+              onClick={refreshComments}
+              disabled={isRefreshing}
+              className="w-full px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRefreshing ? '새로고침 중...' : '🔄 최신 댓글 가져오기'}
+            </button>
+          )}
         </div>
 
         <div className="p-4 space-y-4">

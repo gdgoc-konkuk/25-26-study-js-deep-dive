@@ -11,14 +11,16 @@ export default async function handler(
   res: NextApiResponse<CreateCommentResponse | ApiError>
 ) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: '지원하지 않는 메서드입니다.' });
+    res.status(405).json({ error: '지원하지 않는 메서드입니다.' });
+    return;
   }
 
   const { filePath, body, lineNumber, inReplyTo, anonymousName }: CreateCommentRequest = req.body;
 
   // 필수 파라미터 검증
   if (!filePath || !body) {
-    return res.status(400).json({ error: 'filePath와 body는 필수입니다.' });
+    res.status(400).json({ error: 'filePath와 body는 필수입니다.' });
+    return;
   }
 
   try {
@@ -37,12 +39,13 @@ export default async function handler(
       // OAuth 로그인 사용자: 본인 이름으로 댓글 작성
       const token = getSessionToken(session);
       if (!token) {
-        return res.status(401).json({ error: '토큰이 유효하지 않습니다.' });
+        res.status(401).json({ error: '토큰이 유효하지 않습니다.' });
+        return;
       }
       octokit = getAuthenticatedClient(token);
     } else {
       // 비로그인 사용자: Bot으로 댓글 작성
-      octokit = getBotClient();
+      octokit = await getBotClient();
 
       // 댓글 본문에 작성자 정보 추가
       const author = anonymousName || '익명';
@@ -89,7 +92,7 @@ ${body}`;
     }
 
     // 4. 응답
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       comment: {
         id: comment.id,
@@ -100,7 +103,7 @@ ${body}`;
     });
   } catch (error) {
     console.error('댓글 작성 실패:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: '댓글 작성에 실패했습니다.',
       details: error instanceof Error ? error.message : '알 수 없는 오류',
     });

@@ -9,7 +9,8 @@ export default async function handler(
   res: NextApiResponse<AuthStatusResponse>
 ) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ isAuthenticated: false });
+    res.status(405).json({ isAuthenticated: false });
+    return;
   }
 
   try {
@@ -17,16 +18,17 @@ export default async function handler(
 
     // 세션 유효성 확인
     if (!isSessionValid(session)) {
-      return res.json({ isAuthenticated: false });
+      res.json({ isAuthenticated: false });
+      return;
     }
 
     // 사용자 정보 반환
-    return res.json({
+    res.json({
       isAuthenticated: true,
       user: session.user,
     });
   } catch (error) {
     console.error('세션 확인 실패:', error);
-    return res.json({ isAuthenticated: false });
+    res.json({ isAuthenticated: false });
   }
 }

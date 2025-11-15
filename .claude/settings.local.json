@@ -11,7 +11,13 @@
       "Bash(taskkill:*)",
       "Bash(pnpm add:*)",
       "Bash(timeout:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git fetch:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd /c \"taskkill /PID 25676 /F\")",
+      "Bash(powershell -Command:*)",
+      "Bash(pnpm run dev:*)"
     ],
     "deny": [],
     "ask": []

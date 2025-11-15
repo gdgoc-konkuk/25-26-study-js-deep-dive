@@ -13,15 +13,15 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: '지원하지 않는 메서드입니다.' });
+    res.status(405).json({ error: '지원하지 않는 메서드입니다.' });
+    return;
   }
 
   const { code } = req.query;
 
   if (!code || typeof code !== 'string') {
-    return res
-      .status(400)
-      .json({ error: 'Authorization code가 필요합니다.' });
+    res.status(400).json({ error: 'Authorization code가 필요합니다.' });
+    return;
   }
 
   try {
@@ -43,10 +43,11 @@ export default async function handler(
     const redirectUrl = req.cookies['pr-comments-redirect'] || '/';
     res.setHeader('Set-Cookie', 'pr-comments-redirect=; Path=/; Max-Age=0'); // 쿠키 삭제
 
-    return res.redirect(redirectUrl);
+    res.redirect(redirectUrl);
+    return;
   } catch (error) {
     console.error('OAuth 인증 실패:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: 'OAuth 인증에 실패했습니다.',
       details: error instanceof Error ? error.message : '알 수 없는 오류',
     });

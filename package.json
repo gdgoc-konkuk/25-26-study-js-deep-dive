@@ -14,6 +14,7 @@
     "deploy": "pnpm build:search && gh-pages -d out -t true"
   },
   "dependencies": {
+    "@octokit/app": "^16.1.2",
     "@octokit/rest": "^22.0.1",
     "gh-pages": "^6.3.0",
     "iron-session": "^8.0.4",

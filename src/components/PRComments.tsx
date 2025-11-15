@@ -85,7 +85,9 @@ function CommentItem({ comment, depth = 0 }: { comment: Comment; depth?: number 
 export default function PRComments({ filePath }: PRCommentsProps) {
   const [prComments, setPRComments] = useState<PRWithComments[]>([]);
   const [showCommentForm, setShowCommentForm] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // 초기 데이터 로드 (정적 JSON)
   useEffect(() => {
     const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
     fetch(`${basePath}/data/prs-by-file.json`)
@@ -100,15 +102,62 @@ export default function PRComments({ filePath }: PRCommentsProps) {
       .catch(() => setPRComments([]));
   }, [filePath]);
 
+  // 실시간 댓글 새로고침 함수
+  const refreshComments = async () => {
+    if (prComments.length === 0) return;
+
+    setIsRefreshing(true);
+    try {
+      // 각 PR의 최신 댓글 가져오기
+      const updatedPRs = await Promise.all(
+        prComments.map(async ({ pr }) => {
+          try {
+            const response = await fetch(`/api/comments/list?prNumber=${pr.number}`);
+            if (!response.ok) throw new Error('Failed to fetch comments');
+            const data = await response.json();
+            return {
+              pr,
+              comments: data.comments,
+            };
+          } catch (error) {
+            console.error(`PR #${pr.number} 댓글 새로고침 실패:`, error);
+            return { pr, comments: [] };
+          }
+        })
+      );
+
+      // 댓글이 있는 PR만 필터링
+      const withComments = updatedPRs.filter(item => item.comments.length > 0);
+      setPRComments(withComments);
+    } catch (error) {
+      console.error('댓글 새로고침 실패:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleCommentSuccess = () => {
     setShowCommentForm(false);
-    // 댓글 작성 후 GitHub에 반영되려면 시간이 걸리므로
-    // 실시간 업데이트는 GitHub Actions workflow가 실행된 후 가능
+    // 댓글 작성 후 즉시 새로고침
+    setTimeout(() => {
+      refreshComments();
+    }, 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
   };
 
   return (
     <div className="mt-8 border-t pt-6">
-      <h2 className="text-2xl font-bold mb-4">💬 PR 댓글</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">💬 PR 댓글</h2>
+        {prComments.length > 0 && (
+          <button
+            onClick={refreshComments}
+            disabled={isRefreshing}
+            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isRefreshing ? '새로고침 중...' : '🔄 새로고침'}
+          </button>
+        )}
+      </div>
 
       {prComments.length > 0 && prComments.map(({ pr, comments }) => (
         <div key={pr.number} className="mb-6 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">

@@ -1,6 +1,7 @@
 // GitHub API 클라이언트 생성 및 관리
 
 import { Octokit } from '@octokit/rest';
+import { App } from '@octokit/app';
 
 /**
  * 사용자 OAuth 토큰으로 Octokit 클라이언트 생성
@@ -14,29 +15,66 @@ export function getAuthenticatedClient(token: string): Octokit {
 }
 
 /**
- * Bot 토큰으로 Octokit 클라이언트 생성 (비로그인 댓글용)
- * @returns Bot 인증된 Octokit 인스턴스
+ * GitHub App으로 인증된 Octokit 인스턴스 생성 (비로그인 댓글용)
+ * @returns GitHub App으로 인증된 Octokit 인스턴스
  */
-export function getBotClient(): Octokit {
-  const botToken = process.env.GITHUB_BOT_TOKEN;
+export async function getBotClient(): Promise<Octokit> {
+  const appId = process.env.GITHUB_APP_ID;
+  const privateKey = process.env.GITHUB_PRIVATE_KEY;
+  const { owner, repo } = getRepositoryInfo();
 
-  if (!botToken) {
-    throw new Error('GITHUB_BOT_TOKEN 환경 변수가 설정되지 않았습니다.');
+  if (!appId || !privateKey) {
+    throw new Error('GITHUB_APP_ID 및 GITHUB_PRIVATE_KEY 환경 변수가 설정되지 않았습니다.');
   }
 
-  return new Octokit({
-    auth: botToken,
-  });
+  console.log('🔐 GitHub App 인증 중...');
+  console.log(`   Repository: ${owner}/${repo}`);
+
+  try {
+    // GitHub App 인스턴스 생성
+    const app = new App({
+      appId,
+      privateKey,
+    });
+
+    // 리포지토리의 Installation ID 가져오기
+    const { data: installation } = await app.octokit.request(
+      'GET /repos/{owner}/{repo}/installation',
+      {
+        owner,
+        repo,
+      }
+    );
+
+    console.log(`   ✓ Installation ID: ${installation.id}`);
+
+    // Installation Token 생성
+    const { token } = await app.octokit.auth({
+      type: 'installation',
+      installationId: installation.id,
+    }) as { token: string };
+
+    console.log('   ✓ Installation Token 생성 완료');
+
+    // @octokit/rest의 Octokit 인스턴스 생성
+    const octokit = new Octokit({
+      auth: token,
+    });
+
+    console.log('   ✓ GitHub App 인증 성공');
+
+    return octokit;
+  } catch (error) {
+    console.error('❌ GitHub App 인증 실패:', error);
+    throw error;
+  }
 }
 
 /**
- * GitHub App으로 인증된 클라이언트 생성 (향후 확장용)
- * 현재는 OAuth와 Bot Token만 사용하지만, 추후 GitHub App Installation Token 지원 가능
+ * Bot 클라이언트 가져오기 (하위 호환성)
  */
-export function getAppClient(): Octokit {
-  // GitHub App 인증 로직 (향후 구현)
-  // 현재는 Bot 클라이언트 반환
-  return getBotClient();
+export async function getAppClient(): Promise<Octokit> {
+  return await getBotClient();
 }
 
 /**
