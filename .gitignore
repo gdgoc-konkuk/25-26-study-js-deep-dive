@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 _pagefind/
+
+# PR data (generated at build time)
+/src/data/prs/
+/public/data/

@@ -2,7 +2,7 @@ name: Sync PR Data
 
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize]
+    types: [opened, edited, reopened, synchronize, closed]
     branches:
       - main
   issue_comment:
@@ -65,6 +65,15 @@ jobs:
           # PR 기본 정보 가져오기
           PR_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}")
+
+          # closed 이벤트인 경우, merged가 아니면 종료
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "closed" ]]; then
+            IS_MERGED=$(echo "$PR_DATA" | jq -r '.merged')
+            if [[ "$IS_MERGED" != "true" ]]; then
+              echo "PR is closed but not merged. Skipping data collection."
+              exit 0
+            fi
+          fi
 
           # PR 댓글 가져오기 (issue comments)
           COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \

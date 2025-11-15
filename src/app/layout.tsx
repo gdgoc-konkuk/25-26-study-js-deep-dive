@@ -1,6 +1,8 @@
 import { Footer, Layout, Navbar } from 'nextra-theme-docs';
 import { getPageMap } from 'nextra/page-map';
 import 'nextra-theme-docs/style.css';
+import './globals.css';
+import PRBanner from '../components/PRBanner';
 
 export const metadata = {
   // Define your metadata here
@@ -40,6 +42,7 @@ export default async function RootLayout({
           pageMap={await getPageMap()}
           docsRepositoryBase="https://github.com/gdgoc-konkuk/25-26-study-js-deep-dive/home"
           footer={footer}
+          banner={<PRBanner />}
         >
           {children}
         </Layout>

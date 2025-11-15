@@ -74,3 +74,76 @@ GDGoC Konkuk[25-26] 토론 기반 모던 자바스크립트 딥다이브 스터�
 - 모던 자바스크립트 딥 다이브
 - https://ko.javascript.info/
 - 각종 인터넷, AI 자료(검증 과정 필요)
+
+---
+
+## 📦 PR 댓글 시스템
+
+스터디 웹사이트에 GitHub PR 댓글을 자동으로 표시하는 시스템이 구현되어 있습니다!
+
+### ✨ 주요 기능
+
+#### 1. 상단 PR 배너
+- 최근 3개의 PR이 상단에 표시됩니다
+- PR 상태 (Open/Merged/Closed)를 한눈에 확인
+- 클릭하면 GitHub PR 페이지로 이동
+
+#### 2. PR 목록 페이지 (`/prs`)
+- 모든 PR을 한 곳에서 확인
+- 상태별 필터링 (Open/Merged/Closed)
+- PR 메타데이터, 댓글 수, 변경 파일 목록 표시
+
+#### 3. 챕터별 PR 댓글
+- 각 챕터 페이지 하단에 관련 PR의 댓글 자동 표시
+- 파일 경로 기반으로 관련 PR 자동 탐지
+- PR 댓글, 코드 리뷰 댓글 모두 표시
+
+### 🚀 완전 정적 사이트
+
+- ✅ **GitHub Pages 최적화**: Next.js `output: 'export'` 모드
+- ✅ **서버 불필요**: 모든 데이터는 빌드 타임에 JSON으로 생성
+- ✅ **빠른 로딩**: 정적 파일만 서빙
+
+### 🔄 자동화 흐름
+
+#### 실시간 PR 이벤트 처리
+```
+PR 생성/댓글 추가/Merge
+    ↓
+GitHub Actions 자동 실행
+    ↓
+merged PR만 src/data/prs/pr-{번호}.json 저장
+    ↓
+자동 커밋 및 푸시
+```
+
+#### 빌드 시 데이터 생성
+```
+pnpm prebuild 실행
+    ↓
+GitHub API에서 모든 merged PR 동기화
+    ↓
+로컬에 없는 PR 데이터 저장
+    ↓
+public/data/*.json 생성
+    ↓
+웹사이트에서 PR 정보 표시
+```
+
+### 💻 로컬 개발
+
+```bash
+# 1. PR 데이터 동기화 및 생성
+# GitHub 토큰과 함께 실행하여 모든 merged PR 가져오기
+GITHUB_TOKEN=your_token_here pnpm prebuild
+
+# 2. 개발 서버 실행
+pnpm dev
+
+# 3. 전체 빌드 (배포용)
+pnpm build:search
+```
+
+**참고**: `GITHUB_TOKEN` 없이 `pnpm prebuild`를 실행하면 이미 로컬에 저장된 PR 데이터만 사용합니다. 모든 merged PR을 가져오려면 GitHub Personal Access Token이 필요합니다.
+
+상세한 설정 및 사용 방법은 [SETUP.md](./SETUP.md)를 참고하세요.
