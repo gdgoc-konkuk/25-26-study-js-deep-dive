@@ -3,6 +3,7 @@ import { getPageMap } from 'nextra/page-map';
 import 'nextra-theme-docs/style.css';
 import './globals.css';
 import PRBanner from '../components/PRBanner';
+import CommentSidebar from '../components/CommentSidebar';
 
 export const metadata = {
   // Define your metadata here
@@ -46,6 +47,7 @@ export default async function RootLayout({
         >
           {children}
         </Layout>
+        <CommentSidebar />
       </body>
     </html>
   );

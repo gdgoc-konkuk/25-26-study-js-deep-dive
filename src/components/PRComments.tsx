@@ -2,9 +2,83 @@
 
 import { useEffect, useState } from 'react';
 import type { PRWithComments, Comment } from '../types/pr';
+import CommentReactions from './CommentReactions';
 
 interface PRCommentsProps {
   filePath: string;
+}
+
+/**
+ * 개별 댓글을 렌더링하는 컴포넌트
+ */
+function CommentItem({ comment, depth = 0 }: { comment: Comment; depth?: number }) {
+  // Tailwind의 동적 클래스 생성 문제를 방지하기 위해 고정된 클래스 매핑 사용
+  const getIndentClass = (depth: number) => {
+    if (depth === 0) return '';
+    const classes = 'border-l-2 border-gray-300 dark:border-gray-600 pl-4';
+    const marginClasses = ['', 'ml-4', 'ml-8', 'ml-12'];
+    const marginClass = marginClasses[Math.min(depth, 3)];
+    return `${marginClass} ${classes}`;
+  };
+
+  return (
+    <div className={getIndentClass(depth)}>
+      <div className="bg-white dark:bg-gray-900 rounded p-3 border mb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <img
+            src={comment.author.avatarUrl}
+            alt={comment.author.name}
+            className="w-6 h-6 rounded-full"
+          />
+          <a
+            href={comment.author.profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:underline"
+          >
+            {comment.author.name}
+          </a>
+          <span className="text-xs text-gray-500">
+            {new Date(comment.createdAt).toLocaleDateString('ko-KR')}
+          </span>
+          {comment.type === 'review-comment' && (
+            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded">
+              코드 리뷰
+            </span>
+          )}
+          {comment.type === 'review' && (
+            <span className="text-xs bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded">
+              리뷰
+            </span>
+          )}
+        </div>
+
+        {comment.filePath && (
+          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            📁 {comment.filePath}
+            {comment.lineNumber && ` : ${comment.lineNumber}`}
+          </div>
+        )}
+
+        <div
+          className="prose dark:prose-invert prose-sm max-w-none"
+          dangerouslySetInnerHTML={{ __html: comment.body.replace(/\n/g, '<br>') }}
+        />
+
+        {/* GitHub 호환 이모티콘 반응 표시 */}
+        <CommentReactions reactions={comment.reactions} />
+      </div>
+
+      {/* 답글 (스레드) 렌더링 */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-2">
+          {comment.replies.map((reply) => (
+            <CommentItem key={reply.id} comment={reply} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function PRComments({ filePath }: PRCommentsProps) {
@@ -42,44 +116,9 @@ export default function PRComments({ filePath }: PRCommentsProps) {
           </a>
 
           <div className="space-y-3">
+            {/* 최상위 댓글만 렌더링 (답글은 CommentItem 내부에서 재귀적으로 렌더링) */}
             {comments.map((comment: Comment) => (
-              <div key={comment.id} className="bg-white dark:bg-gray-900 rounded p-3 border">
-                <div className="flex items-center gap-2 mb-2">
-                  <img
-                    src={comment.author.avatarUrl}
-                    alt={comment.author.name}
-                    className="w-6 h-6 rounded-full"
-                  />
-                  <a
-                    href={comment.author.profileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium hover:underline"
-                  >
-                    {comment.author.name}
-                  </a>
-                  <span className="text-xs text-gray-500">
-                    {new Date(comment.createdAt).toLocaleDateString('ko-KR')}
-                  </span>
-                  {comment.type === 'review-comment' && (
-                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded">
-                      코드 리뷰
-                    </span>
-                  )}
-                </div>
-
-                {comment.filePath && (
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    📁 {comment.filePath}
-                    {comment.lineNumber && ` : ${comment.lineNumber}`}
-                  </div>
-                )}
-
-                <div
-                  className="prose dark:prose-invert prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: comment.body.replace(/\n/g, '<br>') }}
-                />
-              </div>
+              <CommentItem key={comment.id} comment={comment} />
             ))}
           </div>
         </div>

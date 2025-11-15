@@ -50,15 +50,15 @@ function transformToPRSummary(data) {
 }
 
 /**
- * PR의 모든 댓글을 통합 형태로 변환
+ * PR의 모든 댓글을 통합 형태로 변환 (스레드별 정리 포함)
  */
 function transformToComments(data) {
   const { comments, reviewComments, reviews } = data;
-  const allComments = [];
+  const commentsMap = new Map();
 
   // 일반 댓글
   comments.forEach((comment) => {
-    allComments.push({
+    commentsMap.set(comment.id, {
       id: comment.id,
       author: {
         name: comment.user.login,
@@ -70,13 +70,24 @@ function transformToComments(data) {
       updatedAt: comment.updated_at,
       url: comment.html_url,
       type: 'comment',
-      reactions: comment.reactions,
+      reactions: comment.reactions || {
+        '+1': 0,
+        '-1': 0,
+        laugh: 0,
+        hooray: 0,
+        confused: 0,
+        heart: 0,
+        rocket: 0,
+        eyes: 0,
+      },
+      replies: [],
+      inReplyToId: null,
     });
   });
 
-  // 리뷰 댓글
+  // 리뷰 댓글 (스레드 정보 포함)
   reviewComments.forEach((comment) => {
-    allComments.push({
+    commentsMap.set(comment.id, {
       id: comment.id,
       author: {
         name: comment.user.login,
@@ -90,7 +101,18 @@ function transformToComments(data) {
       type: 'review-comment',
       filePath: comment.path,
       lineNumber: comment.line || comment.original_line,
-      reactions: comment.reactions,
+      reactions: comment.reactions || {
+        '+1': 0,
+        '-1': 0,
+        laugh: 0,
+        hooray: 0,
+        confused: 0,
+        heart: 0,
+        rocket: 0,
+        eyes: 0,
+      },
+      replies: [],
+      inReplyToId: comment.in_reply_to_id || null,
     });
   });
 
@@ -98,7 +120,7 @@ function transformToComments(data) {
   reviews
     .filter((review) => review.body && review.body.trim() !== '')
     .forEach((review) => {
-      allComments.push({
+      commentsMap.set(review.id, {
         id: review.id,
         author: {
           name: review.user.login,
@@ -109,7 +131,7 @@ function transformToComments(data) {
         createdAt: review.submitted_at,
         updatedAt: review.submitted_at,
         url: review.html_url,
-        type: 'comment',
+        type: 'review',
         reactions: {
           '+1': 0,
           '-1': 0,
@@ -120,10 +142,25 @@ function transformToComments(data) {
           rocket: 0,
           eyes: 0,
         },
+        replies: [],
+        inReplyToId: null,
       });
     });
 
-  return allComments;
+  // 스레드 구조 생성
+  const rootComments = [];
+  commentsMap.forEach((comment) => {
+    if (comment.inReplyToId && commentsMap.has(comment.inReplyToId)) {
+      // 답글인 경우 부모 댓글의 replies에 추가
+      const parent = commentsMap.get(comment.inReplyToId);
+      parent.replies.push(comment);
+    } else {
+      // 최상위 댓글
+      rootComments.push(comment);
+    }
+  });
+
+  return rootComments;
 }
 
 /**

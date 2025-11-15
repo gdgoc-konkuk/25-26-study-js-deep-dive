@@ -222,7 +222,8 @@ pnpm deploy
 
 - `src/components/PRBanner.tsx` - 상단 배너 스타일
 - `src/components/PRList.tsx` - PR 목록 페이지 스타일
-- `src/components/PRComments.tsx` - 챕터별 댓글 스타일
+- `src/components/PRComments.tsx` - 챕터별 댓글 스타일 (스레드형 댓글 지원)
+- `src/components/CommentReactions.tsx` - GitHub 호환 이모티콘 반응 표시
 
 ## 8. 추가 리소스
 

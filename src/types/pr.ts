@@ -45,7 +45,7 @@ export interface PullRequestData {
   changed_files: number;
 }
 
-export interface Comment {
+export interface IssueComment {
   id: number;
   user: GitHubUser;
   created_at: string;
@@ -114,7 +114,7 @@ export interface FileChange {
 
 export interface PRDataFile {
   pr: PullRequestData;
-  comments: Comment[];
+  comments: IssueComment[];
   reviewComments: ReviewComment[];
   reviews: Review[];
   files: FileChange[];
@@ -143,7 +143,8 @@ export interface PRSummary {
   deletions: number;
 }
 
-export interface CommentWithContext {
+// PRWithComments에서 사용하는 Comment 타입
+export interface Comment {
   id: number;
   author: {
     name: string;
@@ -154,7 +155,7 @@ export interface CommentWithContext {
   createdAt: Date;
   updatedAt: Date;
   url: string;
-  type: 'comment' | 'review-comment';
+  type: 'comment' | 'review-comment' | 'review';
   filePath?: string; // review comment인 경우
   lineNumber?: number; // review comment인 경우
   reactions: {
@@ -167,4 +168,11 @@ export interface CommentWithContext {
     rocket: number;
     eyes: number;
   };
+  replies?: Comment[]; // 스레드 답글
+  inReplyToId?: number | null; // 부모 댓글 ID
+}
+
+export interface PRWithComments {
+  pr: PRSummary;
+  comments: Comment[];
 }
