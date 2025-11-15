@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import type { PRWithComments, Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
 
@@ -124,6 +125,11 @@ export default function CommentSidebar() {
   const pathname = usePathname();
   const [comments, setComments] = useState<CommentWithLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // URL 경로를 파일 경로로 변환
@@ -131,21 +137,29 @@ export default function CommentSidebar() {
     const pathParts = pathname.replace(/^\//, '').split('/');
     const possiblePaths = [
       `src/content/${pathParts.join('/')}.mdx`,
-      `src/content/${pathParts.map(p => p.replace(/-/g, ' ')).join('/')}.mdx`,
+      `src/content/${pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/')}.mdx`,
     ];
+
+    console.log('[CommentSidebar] pathname:', pathname);
+    console.log('[CommentSidebar] possiblePaths:', possiblePaths);
 
     const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
     fetch(`${basePath}/data/prs-by-file.json`)
       .then(res => res.json())
       .then(data => {
+        console.log('[CommentSidebar] data keys:', Object.keys(data));
+
         // 가능한 경로들 중에서 매칭되는 것 찾기
         let related: PRWithComments[] = [];
         for (const path of possiblePaths) {
           if (data[path]) {
             related = data[path];
+            console.log('[CommentSidebar] matched path:', path);
             break;
           }
         }
+
+        console.log('[CommentSidebar] related:', related);
 
         const allComments: CommentWithLine[] = [];
 
@@ -168,13 +182,20 @@ export default function CommentSidebar() {
         });
 
         setComments(allComments);
+        console.log('[CommentSidebar] final comments:', allComments);
       })
-      .catch(() => setComments([]));
+      .catch((err) => {
+        console.error('[CommentSidebar] fetch error:', err);
+        setComments([]);
+      });
   }, [pathname]);
 
-  if (comments.length === 0) return null;
+  // 임시로 항상 표시 (디버깅용)
+  // if (comments.length === 0) return null;
 
-  return (
+  if (!mounted) return null;
+
+  const content = (
     <>
       {/* 플로팅 버튼 */}
       <button
@@ -226,4 +247,6 @@ export default function CommentSidebar() {
       )}
     </>
   );
+
+  return createPortal(content, document.body);
 }

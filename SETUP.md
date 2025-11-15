@@ -218,12 +218,41 @@ pnpm deploy
 <PRBanner maxPRs={5} /> // 5개로 변경
 ```
 
-### PR 목록 스타일 변경
+### PR 댓글 시스템 컴포넌트
+
+#### 댓글 표시 방식 (4가지)
+
+1. **🆕 MDX 소스 뷰어 (PR 리뷰 모드)** (`src/components/SourceViewWithComments.tsx`)
+   - GitHub처럼 MDX 소스 파일과 PR 리뷰를 함께 표시
+   - 좌측 하단 "📄 소스 보기" 버튼으로 우측 사이드 패널 토글
+   - 화면 우측 절반에 소스 뷰어 표시
+   - 기존 렌더링된 페이지와 소스를 동시에 확인 가능
+   - 각 라인 번호와 소스 코드 표시
+   - 댓글이 있는 라인은 노란색 하이라이트
+   - 라인 hover 시 💬 버튼으로 인라인 댓글 확장/축소
+   - GitHub raw URL에서 실제 MDX 파일 로드
+
+2. **인라인 코드 댓글** (`src/components/CodeBlockWithComments.tsx`)
+   - 코드 블록의 특정 라인 옆에 댓글 직접 표시
+   - 댓글이 있는 라인 하이라이트 및 💬 버튼 표시
+   - 클릭으로 인라인 댓글 확장/축소
+   - `mdx-components.js`를 통해 모든 코드 블록에 자동 적용
+
+3. **페이지 하단 댓글** (`src/components/PRComments.tsx`)
+   - 챕터별 모든 관련 댓글 표시
+   - 스레드형 계층 구조 지원
+   - `PageWrapper.tsx`를 통해 자동 추가
+
+4. **사이드바 댓글 패널** (`src/components/CommentSidebar.tsx`)
+   - 우측 플로팅 버튼으로 토글
+   - 라인 번호별 정렬
+
+#### 기타 컴포넌트
 
 - `src/components/PRBanner.tsx` - 상단 배너 스타일
 - `src/components/PRList.tsx` - PR 목록 페이지 스타일
-- `src/components/PRComments.tsx` - 챕터별 댓글 스타일 (스레드형 댓글 지원)
 - `src/components/CommentReactions.tsx` - GitHub 호환 이모티콘 반응 표시
+- `src/components/PageWrapper.tsx` - 모든 페이지에 자동으로 PRComments 추가
 
 ## 8. 추가 리소스
 

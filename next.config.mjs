@@ -6,9 +6,8 @@ const withNextra = nextra({
 });
 
 export default withNextra({
-  output: isDevelopment ? 'standalone' : 'export',
-  basePath: isDevelopment ? '' : '/25-26-study-js-deep-dive',
-  assetPrefix: isDevelopment ? '' : '/25-26-study-js-deep-dive',
+  // API Routes를 사용하기 위해 export 모드 제거
+  // Vercel 배포 시 basePath/assetPrefix 불필요
   images: {
     unoptimized: true,
   },

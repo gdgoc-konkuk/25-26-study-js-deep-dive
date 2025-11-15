@@ -37,7 +37,7 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="ko" dir="ltr" suppressHydrationWarning>
-      <body>
+      <body suppressHydrationWarning>
         <Layout
           navbar={navbar}
           pageMap={await getPageMap()}
