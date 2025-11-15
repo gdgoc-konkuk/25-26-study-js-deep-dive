@@ -25,28 +25,41 @@ export default async function handler(
   }
 
   try {
+    console.log('🔐 OAuth 콜백 시작:', { code: code.substring(0, 10) + '...' });
+
     // 1. Authorization code를 Access token으로 교환
     const accessToken = await exchangeCodeForToken(code);
+    console.log('✅ Access Token 획득:', accessToken ? '성공' : '실패');
 
     // 2. Access token으로 사용자 정보 가져오기
     const user = await getAuthenticatedUser(accessToken);
+    console.log('✅ 사용자 정보 획득:', user.login);
 
     // 3. 세션에 저장
     const session = await getSession(req, res);
+    const expiresAt = getTokenExpiry();
+    console.log('📦 세션 데이터:', {
+      user: user.login,
+      hasToken: !!accessToken,
+      expiresAt: new Date(expiresAt).toISOString()
+    });
+
     await saveSession(session, {
       user,
       accessToken,
-      expiresAt: getTokenExpiry(),
+      expiresAt,
     });
+    console.log('✅ 세션 저장 완료');
 
     // 4. 원래 페이지로 리다이렉트 (또는 홈으로)
     const redirectUrl = req.cookies['pr-comments-redirect'] || '/';
+    console.log('🔄 리다이렉트:', redirectUrl);
     res.setHeader('Set-Cookie', 'pr-comments-redirect=; Path=/; Max-Age=0'); // 쿠키 삭제
 
     res.redirect(redirectUrl);
     return;
   } catch (error) {
-    console.error('OAuth 인증 실패:', error);
+    console.error('❌ OAuth 인증 실패:', error);
     res.status(500).json({
       error: 'OAuth 인증에 실패했습니다.',
       details: error instanceof Error ? error.message : '알 수 없는 오류',

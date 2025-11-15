@@ -44,6 +44,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 컴포넌트 마운트 시 인증 상태 확인
   useEffect(() => {
     fetchAuthStatus();
+
+    // 페이지 포커스 시 인증 상태 재확인 (OAuth 리다이렉트 후 돌아왔을 때)
+    const handleFocus = () => {
+      fetchAuthStatus();
+    };
+
+    // 페이지 visibility 변경 시 인증 상태 재확인
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAuthStatus();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // 로그인 (GitHub OAuth)
@@ -52,20 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUrl = window.location.pathname;
     document.cookie = `pr-comments-redirect=${currentUrl}; path=/; max-age=600`; // 10분
 
-    // GitHub OAuth URL로 이동
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
-
-    if (!clientId) {
-      console.error('GITHUB_CLIENT_ID가 설정되지 않았습니다.');
-      alert('GitHub OAuth 설정이 필요합니다. .env.local을 확인해주세요.');
-      return;
-    }
-
-    const redirectUri = `${siteUrl}/api/oauth/authorized`;
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=public_repo`;
-
-    window.location.href = authUrl;
+    // 서버의 /api/auth/login 엔드포인트로 이동 (OAuth URL 생성 및 리다이렉트)
+    window.location.href = '/api/auth/login';
   };
 
   // 로그아웃
