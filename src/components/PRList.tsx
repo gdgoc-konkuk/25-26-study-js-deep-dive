@@ -78,7 +78,7 @@ export default function PRList() {
   const [loadingComments, setLoadingComments] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
     fetch(`${basePath}/data/prs-recent.json`)
       .then(res => res.json())
       .then(setPRs)
@@ -100,7 +100,7 @@ export default function PRList() {
       setLoadingComments(new Set(loadingComments).add(prNumber));
 
       try {
-        const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+        const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
         const response = await fetch(`${basePath}/data/prs-by-file.json`);
         const data = await response.json();
 

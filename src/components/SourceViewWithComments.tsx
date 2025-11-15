@@ -30,7 +30,7 @@ export default function SourceViewWithComments() {
       `src/content/${decodeURIComponent(pathname.replace(/^\//, '')).replace(/-/g, ' ')}.mdx`,
     ];
 
-    const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
 
     // PR 댓글 가져오기
     fetch(`${basePath}/data/prs-by-file.json`)
@@ -67,7 +67,7 @@ export default function SourceViewWithComments() {
 
     // MDX 소스 파일 가져오기
     // GitHub raw URL을 사용하거나 public 폴더에 있는 경우
-    const repoUrl = 'https://raw.githubusercontent.com/gdgoc-konkuk/25-26-study-js-deep-dive/main';
+    const repoUrl = 'https://raw.githubusercontent.com/gdgoc-konkuk/prwiki/main';
     const filePath = possiblePaths[1]; // 두 번째 경로가 가장 정확
 
     fetch(`${repoUrl}/${filePath}`)

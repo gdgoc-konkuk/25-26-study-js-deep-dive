@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import type { PRWithComments, Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
+import { CommentForm } from './CommentForm';
 
 interface CommentWithLine extends Comment {
   prNumber: number;
@@ -126,6 +127,8 @@ export default function CommentSidebar() {
   const [comments, setComments] = useState<CommentWithLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  const [currentFilePath, setCurrentFilePath] = useState<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -143,7 +146,7 @@ export default function CommentSidebar() {
     console.log('[CommentSidebar] pathname:', pathname);
     console.log('[CommentSidebar] possiblePaths:', possiblePaths);
 
-    const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
     fetch(`${basePath}/data/prs-by-file.json`)
       .then(res => res.json())
       .then(data => {
@@ -151,14 +154,22 @@ export default function CommentSidebar() {
 
         // 가능한 경로들 중에서 매칭되는 것 찾기
         let related: PRWithComments[] = [];
+        let matchedPath = '';
         for (const path of possiblePaths) {
           if (data[path]) {
             related = data[path];
+            matchedPath = path;
             console.log('[CommentSidebar] matched path:', path);
             break;
           }
         }
 
+        // 매칭된 경로가 없으면 첫 번째 가능한 경로 사용 (새 파일의 경우)
+        if (!matchedPath && possiblePaths.length > 0) {
+          matchedPath = possiblePaths[0];
+        }
+
+        setCurrentFilePath(matchedPath);
         console.log('[CommentSidebar] related:', related);
 
         const allComments: CommentWithLine[] = [];
@@ -189,6 +200,12 @@ export default function CommentSidebar() {
         setComments([]);
       });
   }, [pathname]);
+
+  const handleCommentSuccess = () => {
+    setShowCommentForm(false);
+    // 댓글 작성 후 GitHub에 반영되려면 시간이 걸리므로
+    // 실시간 업데이트는 GitHub Actions workflow가 실행된 후 가능
+  };
 
   // 임시로 항상 표시 (디버깅용)
   // if (comments.length === 0) return null;
@@ -226,7 +243,7 @@ export default function CommentSidebar() {
         </div>
 
         <div className="p-4 space-y-4">
-          {comments.map((comment) => (
+          {comments.length > 0 && comments.map((comment) => (
             <CommentThreadSidebar
               key={comment.id}
               comment={comment}
@@ -235,6 +252,34 @@ export default function CommentSidebar() {
               prTitle={comment.prTitle}
             />
           ))}
+
+          {comments.length === 0 && !showCommentForm && (
+            <div className="text-center text-gray-500 py-8">
+              <p className="mb-2">아직 댓글이 없습니다.</p>
+              <p className="text-sm">첫 댓글을 작성해보세요!</p>
+            </div>
+          )}
+
+          {/* 댓글 작성 섹션 */}
+          <div className="mt-4 pt-4 border-t">
+            {!showCommentForm ? (
+              <button
+                onClick={() => setShowCommentForm(true)}
+                className="w-full rounded-md border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                disabled={!currentFilePath}
+              >
+                ✍️ 새 댓글 작성하기
+              </button>
+            ) : (
+              currentFilePath && (
+                <CommentForm
+                  filePath={currentFilePath}
+                  onSuccess={handleCommentSuccess}
+                  onCancel={() => setShowCommentForm(false)}
+                />
+              )
+            )}
+          </div>
         </div>
       </div>
 

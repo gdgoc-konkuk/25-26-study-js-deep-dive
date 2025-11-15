@@ -18,7 +18,7 @@ const PR_DATA_DIR = join(projectRoot, 'src', 'data', 'prs');
 const OUTPUT_DIR = join(projectRoot, 'public', 'data');
 
 // GitHub repository 정보 (환경변수 또는 기본값)
-const GITHUB_REPO = process.env.GITHUB_REPOSITORY || 'gdgoc-konkuk/25-26-study-js-deep-dive';
+const GITHUB_REPO = process.env.GITHUB_REPOSITORY || 'gdgoc-konkuk/prwiki';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 /**

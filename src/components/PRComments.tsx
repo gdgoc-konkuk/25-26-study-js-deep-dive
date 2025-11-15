@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { PRWithComments, Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
+import { CommentForm } from './CommentForm';
 
 interface PRCommentsProps {
   filePath: string;
@@ -83,9 +84,10 @@ function CommentItem({ comment, depth = 0 }: { comment: Comment; depth?: number 
 
 export default function PRComments({ filePath }: PRCommentsProps) {
   const [prComments, setPRComments] = useState<PRWithComments[]>([]);
+  const [showCommentForm, setShowCommentForm] = useState(false);
 
   useEffect(() => {
-    const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
     fetch(`${basePath}/data/prs-by-file.json`)
       .then(res => res.json())
       .then(data => {
@@ -98,13 +100,17 @@ export default function PRComments({ filePath }: PRCommentsProps) {
       .catch(() => setPRComments([]));
   }, [filePath]);
 
-  if (prComments.length === 0) return null;
+  const handleCommentSuccess = () => {
+    setShowCommentForm(false);
+    // 댓글 작성 후 GitHub에 반영되려면 시간이 걸리므로
+    // 실시간 업데이트는 GitHub Actions workflow가 실행된 후 가능
+  };
 
   return (
     <div className="mt-8 border-t pt-6">
       <h2 className="text-2xl font-bold mb-4">💬 PR 댓글</h2>
 
-      {prComments.map(({ pr, comments }) => (
+      {prComments.length > 0 && prComments.map(({ pr, comments }) => (
         <div key={pr.number} className="mb-6 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
           <a
             href={pr.url}
@@ -123,6 +129,26 @@ export default function PRComments({ filePath }: PRCommentsProps) {
           </div>
         </div>
       ))}
+
+      {/* 댓글 작성 섹션 */}
+      <div className="mt-6">
+        {!showCommentForm ? (
+          <button
+            onClick={() => setShowCommentForm(true)}
+            className="w-full rounded-md border-2 border-dashed border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            ✍️ 새 댓글 작성하기
+          </button>
+        ) : (
+          <div>
+            <CommentForm
+              filePath={filePath}
+              onSuccess={handleCommentSuccess}
+              onCancel={() => setShowCommentForm(false)}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

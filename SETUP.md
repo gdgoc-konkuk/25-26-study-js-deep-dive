@@ -1,14 +1,21 @@
 # PR 댓글 시스템 설정 가이드
 
-이 문서는 GitHub PR 댓글 자동 표시 기능의 설정 가이드입니다.
+이 문서는 GitHub PR 댓글 시스템의 설정 가이드입니다.
 
 ## ⚡ 핵심 특징
 
-이 프로젝트는 **완전 정적 사이트**로 빌드되어 GitHub Pages에 배포됩니다.
-- ✅ Next.js API 라우트 없음
+### 읽기 모드 (정적 사이트)
+- ✅ Next.js static export로 GitHub Pages에 배포
 - ✅ 모든 PR 데이터는 빌드 타임에 JSON 파일로 생성
 - ✅ 클라이언트에서 정적 JSON 파일만 로드
 - ✅ 간단하고 빠름
+
+### 🆕 쓰기 모드 (Serverless)
+- ✅ Next.js API Routes를 통한 댓글 작성/수정/삭제
+- ✅ GitHub OAuth 로그인 지원 (선택적)
+- ✅ Bot 기반 익명 댓글 지원
+- ✅ 자동 PR 매칭 및 생성
+- ✅ Vercel Serverless Functions로 배포
 
 ## 1. GitHub Actions 권한 설정
 
@@ -110,7 +117,7 @@ pnpm dev
     },
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z",
-    "html_url": "https://github.com/gdgoc-konkuk/25-26-study-js-deep-dive/pull/1",
+    "html_url": "https://github.com/gdgoc-konkuk/prwiki/pull/1",
     "merged": false,
     "additions": 100,
     "deletions": 50,
@@ -179,7 +186,74 @@ pnpm deploy
    - `/prs` 페이지에서 PR 목록 확인
    - 챕터 페이지 하단에 관련 PR 댓글 표시
 
-## 6. 트러블슈팅
+## 6. 🆕 댓글 작성 기능 설정 (선택사항)
+
+댓글 작성/수정/삭제 기능을 활성화하려면 다음 단계를 따르세요.
+
+### 6.1 GitHub App 생성
+
+상세한 가이드: [docs/GITHUB_APP_SETUP.md](./docs/GITHUB_APP_SETUP.md)
+
+**요약:**
+1. GitHub Settings → Developer settings → GitHub Apps → New GitHub App
+2. 필요 권한 설정:
+   - Pull requests: Read & write
+   - Issues: Read & write
+   - Contents: Read & write
+3. Private Key 다운로드
+4. App ID, Client ID, Client Secret 복사
+
+### 6.2 환경 변수 설정
+
+프로젝트 루트에 `.env.local` 파일 생성 (템플릿: [.env.example](./.env.example)):
+
+```env
+# GitHub App 정보
+GITHUB_APP_ID=123456
+GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx
+GITHUB_CLIENT_SECRET=your_client_secret_here
+GITHUB_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----
+여기에_private_key_파일_내용_붙여넣기
+-----END RSA PRIVATE KEY-----"
+
+# GitHub Bot Token
+GITHUB_BOT_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Repository 정보
+GITHUB_REPO_OWNER=gdgoc-konkuk
+GITHUB_REPO_NAME=prwiki
+
+# Auth 암호화 키
+AUTH_SECRET=생성한_64자_랜덤_문자열
+
+# 사이트 URL
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx
+```
+
+### 6.3 개발 서버 실행
+
+```bash
+# Next.js 설정에서 output: 'export' 제거 필요 (이미 제거됨)
+pnpm dev
+```
+
+브라우저에서 `http://localhost:3000` 접속 후:
+1. 우측 상단 "GitHub로 로그인" 버튼으로 OAuth 테스트
+2. 챕터 페이지에서 "새 댓글 작성하기" 버튼으로 댓글 작성 테스트
+
+### 6.4 Vercel 배포 (댓글 기능 포함)
+
+1. Vercel 프로젝트 생성 및 GitHub 연동
+2. Vercel Dashboard → Settings → Environment Variables에 `.env.local`의 모든 변수 추가
+3. `NEXT_PUBLIC_SITE_URL`을 Vercel 도메인으로 변경
+4. GitHub App 설정에서 Callback URL 업데이트:
+   - `https://your-domain.vercel.app/api/oauth/authorized`
+5. 배포
+
+**참고:** 댓글 작성 기능은 Vercel에서만 작동합니다. GitHub Pages는 API Routes를 지원하지 않습니다.
+
+## 7. 트러블슈팅
 
 ### PR 데이터가 업데이트되지 않음
 
@@ -208,7 +282,7 @@ pnpm deploy
 - GitHub Pages 배포 시 basePath가 올바른지 확인
 - `out/data/` 디렉토리에 JSON 파일이 있는지 확인
 
-## 7. 커스터마이징
+## 8. 커스터마이징
 
 ### 배너에 표시되는 PR 개수 변경
 
@@ -247,6 +321,26 @@ pnpm deploy
    - 우측 플로팅 버튼으로 토글
    - 라인 번호별 정렬
 
+#### 🆕 댓글 작성 컴포넌트
+
+- `src/components/CommentForm.tsx` - 댓글 작성 폼
+  - 로그인/비로그인 모드 지원
+  - 익명 이름 입력 (비로그인 시)
+  - 마크다운 입력
+- `src/components/CommentEditForm.tsx` - 댓글 수정 폼
+  - 기존 댓글 내용 로드
+  - 취소 버튼 지원
+- `src/components/CommentActions.tsx` - 댓글 액션 버튼
+  - 수정/삭제 (본인만)
+  - 답글 작성
+  - GitHub에서 보기 링크
+
+#### 인증 컴포넌트
+
+- `src/contexts/AuthContext.tsx` - 전역 인증 상태 관리
+- `src/hooks/useAuth.ts` - 인증 Hook
+- `src/components/AuthButton.tsx` - 로그인/로그아웃 버튼
+
 #### 기타 컴포넌트
 
 - `src/components/PRBanner.tsx` - 상단 배너 스타일
@@ -254,13 +348,14 @@ pnpm deploy
 - `src/components/CommentReactions.tsx` - GitHub 호환 이모티콘 반응 표시
 - `src/components/PageWrapper.tsx` - 모든 페이지에 자동으로 PRComments 추가
 
-## 8. 추가 리소스
+## 9. 추가 리소스
 
 - [Nextra 문서](https://nextra.site)
 - [GitHub Actions 문서](https://docs.github.com/actions)
 - [Next.js 문서](https://nextjs.org/docs)
+- [GitHub App 설정 가이드](./docs/GITHUB_APP_SETUP.md)
 
-## 9. 기여하기
+## 10. 기여하기
 
 새로운 기능이나 개선 사항이 있다면:
 

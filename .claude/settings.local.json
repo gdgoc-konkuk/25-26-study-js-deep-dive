@@ -8,7 +8,10 @@
       "Bash(cat:*)",
       "Bash(pnpm prebuild:*)",
       "Bash(node -e:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(pnpm add:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

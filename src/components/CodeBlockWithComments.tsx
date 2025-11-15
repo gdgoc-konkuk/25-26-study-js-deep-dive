@@ -42,7 +42,7 @@ export default function CodeBlockWithComments({
     console.log('[CodeBlockWithComments] Pathname:', pathname);
     console.log('[CodeBlockWithComments] Possible paths:', possiblePaths);
 
-    const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
     fetch(`${basePath}/data/prs-by-file.json`)
       .then(res => res.json())
       .then(data => {

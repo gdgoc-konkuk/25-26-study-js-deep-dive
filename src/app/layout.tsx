@@ -4,6 +4,8 @@ import 'nextra-theme-docs/style.css';
 import './globals.css';
 import PRBanner from '../components/PRBanner';
 import CommentSidebar from '../components/CommentSidebar';
+import { AuthProvider } from '../contexts/AuthContext';
+import { AuthButton } from '../components/AuthButton';
 
 export const metadata = {
   // Define your metadata here
@@ -11,7 +13,7 @@ export const metadata = {
 };
 
 const basePath =
-  process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+  process.env.NODE_ENV === 'production' ? '/prwiki' : '';
 
 const navbar = (
   <Navbar
@@ -19,16 +21,17 @@ const navbar = (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <img
           src={`${basePath}/images/logo.webp`}
-          alt="GDGoC Logo"
+          alt="PRwiki Logo"
           style={{ height: '32px', width: 'auto' }}
         />
-        <b>GDGoC Konkuk</b>
+        <b>PRwiki</b>
       </div>
     }
+    extraContent={<AuthButton />}
     // ... Your additional navbar options
   />
 );
-const footer = <Footer>{new Date().getFullYear()} GDGoC Konkuk</Footer>;
+const footer = <Footer>{new Date().getFullYear()} PRwiki</Footer>;
 
 export default async function RootLayout({
   children,
@@ -38,16 +41,18 @@ export default async function RootLayout({
   return (
     <html lang="ko" dir="ltr" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <Layout
-          navbar={navbar}
-          pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/gdgoc-konkuk/25-26-study-js-deep-dive/home"
-          footer={footer}
-          banner={<PRBanner />}
-        >
-          {children}
-        </Layout>
-        <CommentSidebar />
+        <AuthProvider>
+          <Layout
+            navbar={navbar}
+            pageMap={await getPageMap()}
+            docsRepositoryBase="https://github.com/gdgoc-konkuk/prwiki/home"
+            footer={footer}
+            banner={<PRBanner />}
+          >
+            {children}
+          </Layout>
+          <CommentSidebar />
+        </AuthProvider>
       </body>
     </html>
   );

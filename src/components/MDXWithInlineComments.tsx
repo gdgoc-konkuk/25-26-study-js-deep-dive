@@ -35,7 +35,7 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
       `src/content/${decodeURIComponent(pathname.replace(/^\//, '')).replace(/-/g, ' ')}.mdx`,
     ];
 
-    const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
 
     // PR 댓글 가져오기
     fetch(`${basePath}/data/prs-by-file.json`)

@@ -1,0 +1,196 @@
+// PR 자동 매칭 및 생성 로직 (핵심!)
+
+import type { Octokit } from '@octokit/rest';
+import { getBotClient, getRepositoryInfo } from './github';
+
+/**
+ * 파일 경로로 PR 검색
+ * @param filePath - 파일 경로 (예: "docs/01-변수.mdx")
+ * @returns 해당 파일을 수정한 PR 목록
+ */
+export async function searchPRsByFile(
+  filePath: string
+): Promise<Array<{ number: number; merged_at: string | null }>> {
+  const octokit = getBotClient();
+  const { owner, repo } = getRepositoryInfo();
+
+  try {
+    // 모든 merged PR 가져오기 (최신순)
+    const { data: prs } = await octokit.pulls.list({
+      owner,
+      repo,
+      state: 'closed', // merged PR은 closed 상태
+      sort: 'updated',
+      direction: 'desc',
+      per_page: 100, // 최근 100개 PR 검색
+    });
+
+    // 각 PR의 변경 파일 목록 확인
+    const matchingPRs: Array<{ number: number; merged_at: string | null }> =
+      [];
+
+    for (const pr of prs) {
+      // merged된 PR만 확인
+      if (!pr.merged_at) continue;
+
+      // PR의 변경 파일 목록 가져오기
+      const { data: files } = await octokit.pulls.listFiles({
+        owner,
+        repo,
+        pull_number: pr.number,
+      });
+
+      // 파일 경로가 일치하는지 확인
+      const hasFile = files.some((file) => file.filename === filePath);
+
+      if (hasFile) {
+        matchingPRs.push({
+          number: pr.number,
+          merged_at: pr.merged_at,
+        });
+      }
+    }
+
+    return matchingPRs;
+  } catch (error) {
+    console.error('PR 검색 실패:', error);
+    return [];
+  }
+}
+
+/**
+ * 최신 merged PR 선택
+ * @param prs - PR 목록
+ * @returns 가장 최신 PR 번호 또는 null
+ */
+export function getLatestMergedPR(
+  prs: Array<{ number: number; merged_at: string | null }>
+): number | null {
+  if (prs.length === 0) return null;
+
+  // merged_at 기준 정렬 (최신순)
+  const sorted = prs
+    .filter((pr) => pr.merged_at !== null)
+    .sort(
+      (a, b) =>
+        new Date(b.merged_at!).getTime() - new Date(a.merged_at!).getTime()
+    );
+
+  return sorted[0]?.number || null;
+}
+
+/**
+ * 댓글 전용 PR 생성 및 즉시 병합
+ * @param filePath - 파일 경로
+ * @returns 생성된 PR 번호
+ */
+export async function createAndMergeCommentPR(
+  filePath: string
+): Promise<number> {
+  const octokit = getBotClient();
+  const { owner, repo } = getRepositoryInfo();
+
+  // 파일명 추출
+  const fileName = filePath.split('/').pop() || filePath;
+
+  try {
+    // 1. 기본 브랜치 정보 가져오기
+    const { data: repoData } = await octokit.repos.get({
+      owner,
+      repo,
+    });
+    const baseBranch = repoData.default_branch;
+
+    // 2. 기본 브랜치의 최신 커밋 SHA 가져오기
+    const { data: baseRef } = await octokit.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${baseBranch}`,
+    });
+    const baseSha = baseRef.object.sha;
+
+    // 3. 새 브랜치 생성 (comments/파일명-타임스탬프)
+    const branchName = `comments/${fileName}-${Date.now()}`;
+    await octokit.git.createRef({
+      owner,
+      repo,
+      ref: `refs/heads/${branchName}`,
+      sha: baseSha,
+    });
+
+    // 4. 빈 커밋 생성 (PR을 위해 커밋 필요)
+    const { data: commit } = await octokit.git.createCommit({
+      owner,
+      repo,
+      message: `[Comments] Auto-generated PR for ${fileName}`,
+      tree: baseSha, // 빈 커밋 (파일 변경 없음)
+      parents: [baseSha],
+    });
+
+    // 5. 브랜치에 커밋 적용
+    await octokit.git.updateRef({
+      owner,
+      repo,
+      ref: `heads/${branchName}`,
+      sha: commit.sha,
+    });
+
+    // 6. PR 생성
+    const { data: pr } = await octokit.pulls.create({
+      owner,
+      repo,
+      title: `[Comments] ${fileName}`,
+      head: branchName,
+      base: baseBranch,
+      body: `이 PR은 \`${filePath}\` 파일에 대한 댓글을 위해 자동으로 생성되었습니다.\n\n**주의**: 이 PR은 자동으로 병합되며, 실제 코드 변경 사항은 없습니다.`,
+    });
+
+    // 7. 레이블 추가
+    await octokit.issues.addLabels({
+      owner,
+      repo,
+      issue_number: pr.number,
+      labels: ['comments', 'auto-generated'],
+    });
+
+    // 8. PR 즉시 병합
+    await octokit.pulls.merge({
+      owner,
+      repo,
+      pull_number: pr.number,
+      commit_title: `[Comments] Auto-merge PR for ${fileName}`,
+      merge_method: 'merge', // merge commit 생성
+    });
+
+    console.log(`✅ 댓글 전용 PR #${pr.number} 생성 및 병합 완료: ${filePath}`);
+
+    return pr.number;
+  } catch (error) {
+    console.error('PR 생성 및 병합 실패:', error);
+    throw new Error(`PR 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+  }
+}
+
+/**
+ * 파일 경로로 타겟 PR 찾기 또는 생성
+ * @param filePath - 파일 경로
+ * @returns PR 번호
+ */
+export async function getOrCreateTargetPR(filePath: string): Promise<number> {
+  console.log(`🔍 파일에 대한 PR 검색 중: ${filePath}`);
+
+  // 1. 기존 PR 검색
+  const prs = await searchPRsByFile(filePath);
+  const latestPR = getLatestMergedPR(prs);
+
+  if (latestPR) {
+    console.log(`✅ 기존 PR 찾음: #${latestPR}`);
+    return latestPR;
+  }
+
+  // 2. 기존 PR이 없으면 새로 생성 및 병합
+  console.log(`📝 기존 PR이 없습니다. 새 PR 생성 중...`);
+  const newPR = await createAndMergeCommentPR(filePath);
+
+  return newPR;
+}

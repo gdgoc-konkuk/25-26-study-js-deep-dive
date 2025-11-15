@@ -7,7 +7,7 @@ export default function PRBanner() {
   const [prs, setPRs] = useState<PRSummary[]>([]);
 
   useEffect(() => {
-    const basePath = process.env.NODE_ENV === 'production' ? '/25-26-study-js-deep-dive' : '';
+    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
     fetch(`${basePath}/data/prs-recent.json`)
       .then(res => res.json())
       .then(data => setPRs(data.slice(0, 3)))
