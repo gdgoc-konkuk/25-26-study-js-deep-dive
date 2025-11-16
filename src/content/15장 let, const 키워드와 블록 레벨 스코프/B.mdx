@@ -333,14 +333,15 @@ C. 변수 선언문 이전에 변수를 참조해도 에러가 발생하지 않�
 D. 선언 단계와 초기화 단계가 분리되어 진행되어, 스코프의 시작 지점부터 초기화 지점까지 일시적 사각지대(TDZ)가 발생한다.
 
 
-<details> <summary><strong>정답 및 해설 보기</strong></summary>
+<details>
+<summary>정답 및 해설 보기</summary>
 
 
 정답: D
 
 
 해설: D는 let 또는 const 키워드 변수의 특징입니다. 
-var 키워드 변수는 런타임 이전에 "선언 단계"와 "초기화 단계"가 한 번에 진행되어 undefined로 초기화되므로 TDZ가 발생하지 않습니다.  
+var 키워드 변수는 런타임 이전에 "선언 단계"와 "초기화 단계"가 한 번에 진행되어 undefined로 초기화되므로 TDZ가 발생하지 않습니다.
 
 </details>
 
@@ -364,14 +365,15 @@ B. let 변수는 함수 레벨 스코프를 따르므로 console.log(foo)는 2�
 C. console.log(foo)는 1을 출력하고, console.log(bar)는 ReferenceError를 발생시킨다.  
 D. foo와 bar 모두 전역 변수이므로 1과 3을 각각 출력한다.
 
-<details> <summary><strong>정답 및 해설 보기</strong></summary>
+<details>
+<summary>정답 및 해설 보기</summary>
 
 
 정답: C
 
 
 해설: let 키워드는 블록 레벨 스코프를 지원합니다. 
-중괄호 {} 내의 foo와 bar는 지역 스코프에 갇히므로, 블록 외부의 foo는 전역 변수인 1을 출력하고, 블록 내부의 bar는 블록 외부에서 참조할 수 없어 ReferenceError가 발생합니다.  
+중괄호 {} 내의 foo와 bar는 지역 스코프에 갇히므로, 블록 외부의 foo는 전역 변수인 1을 출력하고, 블록 내부의 bar는 블록 외부에서 참조할 수 없어 ReferenceError가 발생합니다.
 
 </details>
 
@@ -384,14 +386,15 @@ C. let 변수는 전역 객체의 프로퍼티로 등록되지 않기 때문이�
 D. let 변수는 블록 레벨 스코프를 가져서 코드 블록의 선두로 호이스팅되지 않기 때문이다.
 
 
-<details> <summary><strong>정답 및 해설 보기</strong></summary>
+<details> 
+<summary>정답 및 해설 보기</summary>
 
 
 정답: B
 
 
 해설: 자바스크립트는 모든 선언을 호이스팅하지만, let 변수는 "선언 단계"만 런타임 이전에 실행되고 "초기화 단계"는 선언문에 도달했을 때 실행됩니다. 
-이 초기화 이전에 변수에 접근하려는 시도는 **일시적 사각지대(TDZ)**에 해당하여 ReferenceError를 발생시킵니다.  
+이 초기화 이전에 변수에 접근하려는 시도는 **일시적 사각지대(TDZ)**에 해당하여 ReferenceError를 발생시킵니다.
 
 </details>
 
@@ -404,7 +407,8 @@ C. const 키워드로 선언한 변수는 반드시 선언과 동시에 초기�
 D. 상수를 선언할 때만 사용해야 하며, 재할당이 필요한 변수를 선언할 때도 적극 권장된다. 
 
 
-<details> <summary><strong>정답 및 해설 보기</strong></summary>
+<details>
+<summary>정답 및 해설 보기</summary>
 
 
 정답: C
@@ -417,7 +421,7 @@ A. const는 재할당을 금지할 뿐, 객체의 내부 프로퍼티 변경은 
 
 B. const는 let과 마찬가지로 호이스팅은 발생하지만, TDZ 때문에 발생하지 않는 것처럼 동작합니다. 
 
-D. const는 상수를 선언할 때 사용하며, 기본 변수 선언 시 권장되지만, 재할당이 필요한 경우는 let을 사용해야 합니다.  
+D. const는 상수를 선언할 때 사용하며, 기본 변수 선언 시 권장되지만, 재할당이 필요한 경우는 let을 사용해야 합니다.
 
 </details>
 
@@ -437,13 +441,14 @@ B. (가)는 허용되지만 (나)는 TypeError가 발생한다. 이는 const가 
 C. const는 불변(Immutable)을 의미하므로 (가)와 (나) 모두 TypeError가 발생한다. 
 D. var 키워드처럼 동작하므로 (가)와 (나) 모두 허용된다.
 
-<details> <summary><strong>정답 및 해설 보기</strong></summary>
+<details> 
+<summary>정답 및 해설 보기</summary>
 
 
 정답: B
 
 
 해설: const는 재할당을 금지할 뿐, 변수가 가리키는 객체의 내부 프로퍼티 변경은 막지 않습니다. 
-따라서 프로퍼티 값 변경인 (가)는 가능하지만, 변수에 새로운 객체의 참조 값을 할당하려는 (나)는 TypeError가 발생합니다.  
+따라서 프로퍼티 값 변경인 (가)는 가능하지만, 변수에 새로운 객체의 참조 값을 할당하려는 (나)는 TypeError가 발생합니다.
 
 </details>
