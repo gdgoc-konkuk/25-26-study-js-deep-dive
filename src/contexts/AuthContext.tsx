@@ -3,6 +3,7 @@
 // 인증 Context 및 Provider
 
 import { createContext, useEffect, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import type { AuthStatus } from '@/types/auth';
 
 interface AuthContextValue extends AuthStatus {
@@ -86,8 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: null,
         isLoading: false,
       });
+
+      toast.success('로그아웃되었습니다.');
     } catch (error) {
       console.error('로그아웃 실패:', error);
+      toast.error('로그아웃에 실패했습니다.');
     }
   };
 

@@ -3,6 +3,7 @@
 // 댓글 작성 폼 (핵심 컴포넌트!)
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import type { CreateCommentRequest } from '@/types/api';
 
@@ -75,9 +76,11 @@ export function CommentForm({
       setAnonymousName('');
       onSuccess?.(data.comment.id);
 
-      alert('댓글이 작성되었습니다! 🎉');
+      toast.success('댓글이 작성되었습니다! 🎉');
     } catch (err) {
-      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

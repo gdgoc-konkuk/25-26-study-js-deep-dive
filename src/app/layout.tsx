@@ -6,6 +6,7 @@ import PRBanner from '../components/PRBanner';
 import CommentSidebar from '../components/CommentSidebar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { AuthButton } from '../components/AuthButton';
+import { Toaster } from 'sonner';
 
 export const metadata = {
   // Define your metadata here
@@ -52,6 +53,7 @@ export default async function RootLayout({
             {children}
           </Layout>
           <CommentSidebar />
+          <Toaster position="bottom-right" richColors />
         </AuthProvider>
       </body>
     </html>

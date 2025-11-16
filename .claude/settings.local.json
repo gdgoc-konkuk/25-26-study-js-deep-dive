@@ -17,7 +17,10 @@
       "Bash(findstr:*)",
       "Bash(cmd /c \"taskkill /PID 25676 /F\")",
       "Bash(powershell -Command:*)",
-      "Bash(pnpm run dev:*)"
+      "Bash(pnpm run dev:*)",
+      "Bash(git remote:*)",
+      "Bash(cmd /c \"taskkill /PID 27288 /F\")",
+      "Bash(cmd /c \"taskkill /PID 21228 /F\")"
     ],
     "deny": [],
     "ask": []

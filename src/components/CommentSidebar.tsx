@@ -136,112 +136,69 @@ export default function CommentSidebar() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
+  // 초기 데이터 로드 함수
+  const loadComments = async () => {
     // URL 경로를 파일 경로로 변환
-    // 예: /04장-변수/A -> src/content/04장 변수/A.mdx
     const pathParts = pathname.replace(/^\//, '').split('/');
-    const possiblePaths = [
-      `src/content/${pathParts.join('/')}.mdx`,
-      `src/content/${pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/')}.mdx`,
-    ];
+    const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
+    const filePath = `src/content/${convertedPath}.mdx`;
 
-    console.log('[CommentSidebar] pathname:', pathname);
-    console.log('[CommentSidebar] possiblePaths:', possiblePaths);
+    console.log('[CommentSidebar] 파일에 대한 댓글 로드:', filePath);
+    setCurrentFilePath(filePath);
 
-    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
-    fetch(`${basePath}/data/prs-by-file.json`)
-      .then(res => res.json())
-      .then(data => {
-        console.log('[CommentSidebar] data keys:', Object.keys(data));
-
-        // 가능한 경로들 중에서 매칭되는 것 찾기
-        let related: PRWithComments[] = [];
-        let matchedPath = '';
-        for (const path of possiblePaths) {
-          if (data[path]) {
-            related = data[path];
-            matchedPath = path;
-            console.log('[CommentSidebar] matched path:', path);
-            break;
-          }
-        }
-
-        // 매칭된 경로가 없으면 첫 번째 가능한 경로 사용 (새 파일의 경우)
-        if (!matchedPath && possiblePaths.length > 0) {
-          matchedPath = possiblePaths[0];
-        }
-
-        setCurrentFilePath(matchedPath);
-        setRelatedPRs(related);
-        console.log('[CommentSidebar] related:', related);
-
-        const allComments: CommentWithLine[] = [];
-
-        related.forEach(({ pr, comments: prComments }) => {
-          prComments.forEach((comment: Comment) => {
-            allComments.push({
-              ...comment,
-              prNumber: pr.number,
-              prTitle: pr.title,
-              prUrl: pr.url,
-            });
-          });
-        });
-
-        // 라인 번호 순으로 정렬 (없으면 뒤로)
-        allComments.sort((a, b) => {
-          if (!a.lineNumber) return 1;
-          if (!b.lineNumber) return -1;
-          return a.lineNumber - b.lineNumber;
-        });
-
-        setComments(allComments);
-        console.log('[CommentSidebar] final comments:', allComments);
-      })
-      .catch((err) => {
-        console.error('[CommentSidebar] fetch error:', err);
-        setComments([]);
-      });
-  }, [pathname]);
-
-  // 실시간 댓글 새로고침 함수
-  const refreshComments = async () => {
-    if (relatedPRs.length === 0) return;
-
-    setIsRefreshing(true);
     try {
-      // 각 PR의 최신 댓글 가져오기
-      const updatedPRs = await Promise.all(
-        relatedPRs.map(async ({ pr }) => {
-          try {
-            const response = await fetch(`/api/comments/list?prNumber=${pr.number}`);
-            if (!response.ok) throw new Error('Failed to fetch comments');
-            const data = await response.json();
-            return {
-              pr,
-              comments: data.comments,
-            };
-          } catch (error) {
-            console.error(`PR #${pr.number} 댓글 새로고침 실패:`, error);
-            return { pr, comments: [] };
-          }
-        })
-      );
+      const response = await fetch(`/api/comments/list?filePath=${encodeURIComponent(filePath)}`);
 
-      setRelatedPRs(updatedPRs);
+      if (!response.ok) {
+        console.log('[CommentSidebar] API 응답 실패:', response.status);
+        setComments([]);
+        setRelatedPRs([]);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('[CommentSidebar] 받아온 댓글:', data.comments);
+      console.log('[CommentSidebar] PR 정보:', { prNumber: data.prNumber, prTitle: data.prTitle });
 
       // 댓글 목록 재구성
       const allComments: CommentWithLine[] = [];
-      updatedPRs.forEach(({ pr, comments: prComments }) => {
-        prComments.forEach((comment: any) => {
+      if (data.comments && data.comments.length > 0) {
+        data.comments.forEach((comment: any) => {
           allComments.push({
             ...comment,
-            prNumber: pr.number,
-            prTitle: pr.title,
-            prUrl: pr.url,
+            prNumber: data.prNumber,
+            prTitle: data.prTitle,
+            prUrl: data.prUrl,
           });
         });
-      });
+
+        // PR 정보 업데이트
+        setRelatedPRs([{
+          pr: {
+            number: data.prNumber,
+            title: data.prTitle,
+            state: 'merged' as const,
+            author: {
+              name: 'Unknown',
+              avatarUrl: '',
+              profileUrl: '',
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            mergedAt: new Date(),
+            url: data.prUrl,
+            labels: [],
+            commentCount: data.comments.length,
+            reviewCount: 0,
+            changedFiles: [],
+            additions: 0,
+            deletions: 0,
+          },
+          comments: data.comments,
+        }]);
+      } else {
+        setRelatedPRs([]);
+      }
 
       // 라인 번호 순으로 정렬
       allComments.sort((a, b) => {
@@ -251,8 +208,23 @@ export default function CommentSidebar() {
       });
 
       setComments(allComments);
+      console.log('[CommentSidebar] final comments:', allComments);
     } catch (error) {
-      console.error('댓글 새로고침 실패:', error);
+      console.error('[CommentSidebar] 댓글 로드 실패:', error);
+      setComments([]);
+      setRelatedPRs([]);
+    }
+  };
+
+  useEffect(() => {
+    loadComments();
+  }, [pathname]);
+
+  // 실시간 댓글 새로고침 함수
+  const refreshComments = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadComments();
     } finally {
       setIsRefreshing(false);
     }

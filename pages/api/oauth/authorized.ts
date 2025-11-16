@@ -51,10 +51,13 @@ export default async function handler(
     });
     console.log('✅ 세션 저장 완료');
 
+    // 디버깅: 쿠키 헤더 확인
+    console.log('🍪 [OAuth] 요청 쿠키:', req.headers.cookie || 'none');
+
     // 4. 원래 페이지로 리다이렉트 (또는 홈으로)
     const redirectUrl = req.cookies['pr-comments-redirect'] || '/';
     console.log('🔄 리다이렉트:', redirectUrl);
-    res.setHeader('Set-Cookie', 'pr-comments-redirect=; Path=/; Max-Age=0'); // 쿠키 삭제
+    // 리다이렉트 쿠키는 이미 max-age=600 (10분)으로 설정되어 자동 만료됨
 
     res.redirect(redirectUrl);
     return;

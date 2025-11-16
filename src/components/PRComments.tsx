@@ -87,54 +87,64 @@ export default function PRComments({ filePath }: PRCommentsProps) {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 초기 데이터 로드 (정적 JSON)
-  useEffect(() => {
-    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
-    fetch(`${basePath}/data/prs-by-file.json`)
-      .then(res => res.json())
-      .then(data => {
-        // 현재 파일과 관련된 PR 찾기
-        const related = data[filePath] || [];
-        // 댓글이 있는 PR만 필터링
-        const withComments = related.filter((item: PRWithComments) => item.comments.length > 0);
-        setPRComments(withComments);
-      })
-      .catch(() => setPRComments([]));
-  }, [filePath]);
-
-  // 실시간 댓글 새로고침 함수
-  const refreshComments = async () => {
-    if (prComments.length === 0) return;
-
+  // 댓글 로드 함수 (API 직접 호출)
+  const loadComments = async () => {
     setIsRefreshing(true);
     try {
-      // 각 PR의 최신 댓글 가져오기
-      const updatedPRs = await Promise.all(
-        prComments.map(async ({ pr }) => {
-          try {
-            const response = await fetch(`/api/comments/list?prNumber=${pr.number}`);
-            if (!response.ok) throw new Error('Failed to fetch comments');
-            const data = await response.json();
-            return {
-              pr,
-              comments: data.comments,
-            };
-          } catch (error) {
-            console.error(`PR #${pr.number} 댓글 새로고침 실패:`, error);
-            return { pr, comments: [] };
-          }
-        })
-      );
+      console.log('[PRComments] 파일에 대한 댓글 로드:', filePath);
+      const response = await fetch(`/api/comments/list?filePath=${encodeURIComponent(filePath)}`);
 
-      // 댓글이 있는 PR만 필터링
-      const withComments = updatedPRs.filter(item => item.comments.length > 0);
-      setPRComments(withComments);
+      if (!response.ok) {
+        throw new Error('Failed to fetch comments');
+      }
+
+      const data = await response.json();
+      console.log('[PRComments] 받아온 댓글:', data.comments);
+      console.log('[PRComments] PR 정보:', { prNumber: data.prNumber, prTitle: data.prTitle });
+
+      // 댓글을 PR별로 그룹화 (간단하게 하나의 PR로 처리)
+      if (data.comments && data.comments.length > 0) {
+        setPRComments([{
+          pr: {
+            number: data.prNumber,
+            title: data.prTitle,
+            state: 'merged' as const,
+            author: {
+              name: 'Unknown',
+              avatarUrl: '',
+              profileUrl: '',
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            mergedAt: new Date(),
+            url: data.prUrl,
+            labels: [],
+            commentCount: data.comments.length,
+            reviewCount: 0,
+            changedFiles: [],
+            additions: 0,
+            deletions: 0,
+          },
+          comments: data.comments,
+        }]);
+      } else {
+        setPRComments([]);
+      }
     } catch (error) {
-      console.error('댓글 새로고침 실패:', error);
+      console.error('[PRComments] 댓글 로드 실패:', error);
+      setPRComments([]);
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    loadComments();
+  }, [filePath]);
+
+  // 실시간 댓글 새로고침 함수
+  const refreshComments = loadComments;
 
   const handleCommentSuccess = () => {
     setShowCommentForm(false);

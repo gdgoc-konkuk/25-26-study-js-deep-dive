@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getBotClient } from '../../../src/lib/octokit';
+import { getBotClient, getRepositoryInfo } from '../../../src/lib/github';
+import { getOrCreateTargetPR } from '../../../src/lib/pr-manager';
 
 /**
- * 특정 PR의 댓글 목록을 GitHub API에서 직접 가져오기
+ * 특정 파일 또는 PR의 댓글 목록을 GitHub API에서 직접 가져오기
+ * GET /api/comments/list?filePath=src/content/home.mdx
  * GET /api/comments/list?prNumber=123
  */
 export default async function handler(
@@ -10,25 +12,38 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
-  const { prNumber } = req.query;
+  const { prNumber: prNumberParam, filePath } = req.query;
 
-  if (!prNumber || typeof prNumber !== 'string') {
-    return res.status(400).json({ error: 'PR number is required' });
+  // filePath 또는 prNumber 중 하나는 필수
+  if ((!prNumberParam && !filePath) ||
+      (typeof prNumberParam !== 'string' && typeof filePath !== 'string')) {
+    res.status(400).json({ error: 'filePath 또는 prNumber가 필요합니다.' });
+    return;
   }
 
   try {
     const octokit = await getBotClient();
-    const owner = process.env.GITHUB_REPO_OWNER || 'gdgoc-konkuk';
-    const repo = process.env.GITHUB_REPO_NAME || '25-26-study-js-deep-dive';
+    const { owner, repo } = getRepositoryInfo();
+
+    // filePath가 제공된 경우 PR 번호를 찾음
+    let prNumber: number;
+    if (filePath && typeof filePath === 'string') {
+      console.log(`📋 파일에 대한 댓글 목록 조회: ${filePath}`);
+      prNumber = await getOrCreateTargetPR(filePath);
+      console.log(`✓ PR #${prNumber}의 댓글을 조회합니다`);
+    } else {
+      prNumber = parseInt(prNumberParam as string);
+    }
 
     // PR 이슈 댓글 가져오기
     const { data: issueComments } = await octokit.issues.listComments({
       owner,
       repo,
-      issue_number: parseInt(prNumber),
+      issue_number: prNumber,
       per_page: 100,
     });
 
@@ -36,7 +51,7 @@ export default async function handler(
     const { data: reviewComments } = await octokit.pulls.listReviewComments({
       owner,
       repo,
-      pull_number: parseInt(prNumber),
+      pull_number: prNumber,
       per_page: 100,
     });
 
@@ -102,10 +117,22 @@ export default async function handler(
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
 
-    return res.status(200).json({ comments });
+    // PR 정보도 함께 반환
+    const { data: prData } = await octokit.pulls.get({
+      owner,
+      repo,
+      pull_number: prNumber,
+    });
+
+    res.status(200).json({
+      comments,
+      prNumber,
+      prTitle: prData.title,
+      prUrl: prData.html_url,
+    });
   } catch (error) {
     console.error('댓글 목록 조회 실패:', error);
-    return res.status(500).json({
+    res.status(500).json({
       error: '댓글 목록 조회에 실패했습니다.',
       details: error instanceof Error ? error.message : '알 수 없는 오류',
     });

@@ -102,7 +102,7 @@ export async function createAndMergeCommentPR(
   const octokit = await getBotClient();
   const { owner, repo } = getRepositoryInfo();
 
-  // 파일명 추출
+  // 파일명 추출 (브랜치명용)
   const fileName = filePath.split('/').pop() || filePath;
 
   try {
@@ -142,7 +142,7 @@ export async function createAndMergeCommentPR(
     const { data: commit } = await octokit.git.createCommit({
       owner,
       repo,
-      message: `[Comments] Auto-generated PR for ${fileName}`,
+      message: `[Comments] Auto-generated PR for ${filePath}`,
       tree: treeSha, // tree SHA 사용 (커밋 SHA가 아님)
       parents: [baseSha],
     });
@@ -155,11 +155,11 @@ export async function createAndMergeCommentPR(
       sha: commit.sha,
     });
 
-    // 6. PR 생성
+    // 6. PR 생성 (제목에 전체 파일 경로 포함 - 검색 시 매칭용)
     const { data: pr } = await octokit.pulls.create({
       owner,
       repo,
-      title: `[Comments] ${fileName}`,
+      title: `[Comments] ${filePath}`, // 전체 파일 경로 사용
       head: branchName,
       base: baseBranch,
       body: `이 PR은 \`${filePath}\` 파일에 대한 댓글을 위해 자동으로 생성되었습니다.\n\n**주의**: 이 PR은 자동으로 병합되며, 실제 코드 변경 사항은 없습니다.`,
@@ -178,7 +178,7 @@ export async function createAndMergeCommentPR(
       owner,
       repo,
       pull_number: pr.number,
-      commit_title: `[Comments] Auto-merge PR for ${fileName}`,
+      commit_title: `[Comments] Auto-merge PR for ${filePath}`,
       merge_method: 'merge', // merge commit 생성
     });
 

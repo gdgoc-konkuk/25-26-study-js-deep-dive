@@ -15,6 +15,7 @@ const sessionOptions = {
     httpOnly: true,
     sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24 * 7, // 7일
+    path: '/', // 명시적으로 path 설정
   },
 };
 
@@ -87,6 +88,12 @@ export async function saveSession(
   session.expiresAt = data.expiresAt;
 
   await session.save();
+
+  console.log('[Session] 세션 저장 성공:', {
+    user: session.user?.login,
+    hasToken: !!session.accessToken,
+    expiresAt: session.expiresAt ? new Date(session.expiresAt).toISOString() : 'null',
+  });
 }
 
 /**

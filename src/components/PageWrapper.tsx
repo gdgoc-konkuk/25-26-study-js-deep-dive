@@ -17,7 +17,6 @@ export default function PageWrapper({ children, sourceCode }: PageWrapperProps) 
   const shouldShowComments =
     pathname &&
     !pathname.includes('/prs') &&
-    !pathname.includes('/home') &&
     pathname !== '/';
 
   if (!shouldShowComments) {
