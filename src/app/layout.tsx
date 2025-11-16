@@ -5,6 +5,7 @@ import './globals.css';
 import PRBanner from '../components/PRBanner';
 import CommentSidebar from '../components/CommentSidebar';
 import { AuthProvider } from '../contexts/AuthContext';
+import { CommentsProvider } from '../contexts/CommentsContext';
 import { AuthButton } from '../components/AuthButton';
 import { Toaster } from 'sonner';
 
@@ -43,17 +44,19 @@ export default async function RootLayout({
     <html lang="ko" dir="ltr" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <AuthProvider>
-          <Layout
-            navbar={navbar}
-            pageMap={await getPageMap()}
-            docsRepositoryBase="https://github.com/gdgoc-konkuk/prwiki/home"
-            footer={footer}
-            banner={<PRBanner />}
-          >
-            {children}
-          </Layout>
-          <CommentSidebar />
-          <Toaster position="bottom-right" richColors />
+          <CommentsProvider>
+            <Layout
+              navbar={navbar}
+              pageMap={await getPageMap()}
+              docsRepositoryBase="https://github.com/gdgoc-konkuk/prwiki/home"
+              footer={footer}
+              banner={<PRBanner />}
+            >
+              {children}
+            </Layout>
+            <CommentSidebar />
+            <Toaster position="bottom-right" richColors />
+          </CommentsProvider>
         </AuthProvider>
       </body>
     </html>
