@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import type { Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
@@ -32,6 +32,13 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [showCommentButton, setShowCommentButton] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
+
+  // 댓글 popover 관련 state
+  const [activeComment, setActiveComment] = useState<CommentWithPR | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+
+  // 렌더링된 MDX의 ref
+  const renderedMdxRef = useRef<HTMLDivElement>(null);
 
   // sourceCode를 라인별로 분리
   const sourceLines = sourceCode ? sourceCode.split('\n') : [];
@@ -177,6 +184,80 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
     // 댓글 목록 새로고침
     window.location.reload();
   };
+
+  // 텍스트 하이라이트 및 클릭 이벤트 등록
+  useEffect(() => {
+    if (!renderedMdxRef.current || !showReviews) return;
+
+    const container = renderedMdxRef.current;
+    const textComments = comments.filter(c => c.selectedText);
+
+    // 기존 하이라이트 제거
+    const existingHighlights = container.querySelectorAll('.comment-highlight');
+    existingHighlights.forEach(el => {
+      const parent = el.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+        parent.normalize();
+      }
+    });
+
+    // 댓글이 없으면 종료
+    if (textComments.length === 0) return;
+
+    // 텍스트 하이라이트 적용
+    textComments.forEach((comment) => {
+      if (!comment.selectedText) return;
+
+      const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        const text = node.textContent || '';
+        const index = text.indexOf(comment.selectedText);
+
+        if (index !== -1) {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + comment.selectedText.length);
+
+          const highlight = document.createElement('mark');
+          highlight.className = 'comment-highlight bg-yellow-200 dark:bg-yellow-700/30 cursor-pointer hover:bg-yellow-300 dark:hover:bg-yellow-600/40 transition-colors rounded px-0.5';
+          highlight.setAttribute('data-comment-id', comment.id.toString());
+
+          // 클릭 이벤트
+          highlight.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = highlight.getBoundingClientRect();
+            setActiveComment(comment);
+            setPopoverPosition({
+              x: rect.left + rect.width / 2,
+              y: rect.bottom + 5,
+            });
+          });
+
+          range.surroundContents(highlight);
+          break; // 첫 번째 매칭만 처리
+        }
+      }
+    });
+
+    // cleanup
+    return () => {
+      const highlights = container.querySelectorAll('.comment-highlight');
+      highlights.forEach(el => {
+        const parent = el.parentNode;
+        if (parent) {
+          parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+          parent.normalize();
+        }
+      });
+    };
+  }, [comments, showReviews]);
 
   const commentsByLine = comments.reduce((acc, comment) => {
     const lineNum = comment.lineNumber || 0;
@@ -432,8 +513,10 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
 
       {/* 렌더링된 MDX (항상 표시) */}
       <div
+        ref={renderedMdxRef}
         className="rendered-mdx"
         onMouseUp={handleTextSelection}
+        onClick={() => setActiveComment(null)} // 배경 클릭 시 popover 닫기
       >
         {children}
       </div>
@@ -478,6 +561,85 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
             onCancel={handleCancelComment}
             placeholder="선택한 텍스트에 대한 댓글을 작성하세요..."
           />
+        </div>
+      )}
+
+      {/* 댓글 Popover */}
+      {activeComment && popoverPosition && showReviews && (
+        <div
+          className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 max-w-md"
+          style={{
+            left: `${popoverPosition.x}px`,
+            top: `${popoverPosition.y}px`,
+            transform: 'translateX(-50%)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* PR 정보 */}
+          <a
+            href={activeComment.prUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline mb-2 block font-semibold"
+          >
+            #{activeComment.prNumber} {activeComment.prTitle}
+          </a>
+
+          {/* 선택된 텍스트 */}
+          {activeComment.selectedText && (
+            <div className="text-xs bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded border-l-4 border-yellow-500 mb-3">
+              <span className="text-gray-600 dark:text-gray-400 italic">"{activeComment.selectedText}"</span>
+            </div>
+          )}
+
+          {/* 작성자 */}
+          <div className="flex items-center gap-2 mb-2">
+            <img
+              src={activeComment.author.avatarUrl}
+              alt={activeComment.author.name}
+              className="w-6 h-6 rounded-full"
+            />
+            <a
+              href={activeComment.author.profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium hover:underline"
+            >
+              {activeComment.author.name}
+            </a>
+            <span className="text-xs text-gray-500">
+              {new Date(activeComment.createdAt).toLocaleDateString('ko-KR')}
+            </span>
+          </div>
+
+          {/* 댓글 내용 */}
+          <div
+            className="text-sm prose dark:prose-invert prose-sm max-w-none mb-2"
+            dangerouslySetInnerHTML={{
+              __html: activeComment.body.replace(/\n/g, '<br>'),
+            }}
+          />
+
+          {/* 반응 */}
+          <CommentReactions reactions={activeComment.reactions} />
+
+          {/* GitHub 링크 */}
+          <a
+            href={activeComment.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 mt-2 inline-block"
+          >
+            GitHub에서 보기 →
+          </a>
+
+          {/* 닫기 버튼 */}
+          <button
+            onClick={() => setActiveComment(null)}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>
