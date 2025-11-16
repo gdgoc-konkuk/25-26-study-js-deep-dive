@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import type { Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
+import { useComments } from '../contexts/CommentsContext';
 
 interface CommentWithPR extends Comment {
   prNumber: number;
@@ -23,68 +24,30 @@ export default function CodeBlockWithComments({
   ...props
 }: CodeBlockWithCommentsProps) {
   const pathname = usePathname();
-  const [comments, setComments] = useState<CommentWithPR[]>([]);
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    if (!pathname) return;
+  // 현재 파일 경로 계산
+  const pathParts = pathname?.replace(/^\//, '').split('/') || [];
+  const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
+  const filePath = `src/content/${convertedPath}.mdx`;
 
-    // URL 경로를 파일 경로로 변환
-    // 예: /04장-변수/A -> src/content/04장 변수/A.mdx
-    const pathParts = pathname.replace(/^\//, '').split('/');
-    const possiblePaths = [
-      `src/content/${pathParts.join('/')}.mdx`,
-      `src/content/${pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/')}.mdx`,
-      `src/content/${decodeURIComponent(pathname.replace(/^\//, ''))}.mdx`,
-      `src/content/${decodeURIComponent(pathname.replace(/^\//, '')).replace(/-/g, ' ')}.mdx`,
-    ];
+  // useComments 훅으로 댓글 데이터 가져오기 (동적 API 사용)
+  const { comments: rawComments, prInfo } = useComments(filePath);
 
-    console.log('[CodeBlockWithComments] Pathname:', pathname);
-    console.log('[CodeBlockWithComments] Possible paths:', possiblePaths);
+  // 댓글에 PR 정보 추가 (CommentWithPR 타입으로 변환)
+  const comments = useMemo<CommentWithPR[]>(() => {
+    if (!prInfo || !rawComments) return [];
 
-    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
-    fetch(`${basePath}/data/prs-by-file.json`)
-      .then(res => res.json())
-      .then(data => {
-        let related: any[] = [];
-        let matchedPath = '';
-        for (const path of possiblePaths) {
-          if (data[path]) {
-            related = data[path];
-            matchedPath = path;
-            break;
-          }
-        }
-
-        console.log('[CodeBlockWithComments] Matched path:', matchedPath);
-        console.log('[CodeBlockWithComments] Related PRs:', related.length);
-
-        const fileComments: CommentWithPR[] = [];
-        related.forEach(({ pr, comments: prComments }) => {
-          prComments.forEach((comment: Comment) => {
-            if (comment.type === 'review-comment' && comment.lineNumber) {
-              fileComments.push({
-                ...comment,
-                prNumber: pr.number,
-                prTitle: pr.title,
-                prUrl: pr.url,
-              });
-            }
-          });
-        });
-
-        console.log('[CodeBlockWithComments] Review comments found:', fileComments.length);
-        if (fileComments.length > 0) {
-          console.log('[CodeBlockWithComments] Line numbers:', fileComments.map(c => c.lineNumber));
-        }
-
-        setComments(fileComments);
-      })
-      .catch((err) => {
-        console.error('[CodeBlockWithComments] Error fetching data:', err);
-        setComments([]);
-      });
-  }, [pathname]);
+    // 인라인 리뷰 댓글만 필터링 (lineNumber가 있는 것만)
+    return rawComments
+      .filter(comment => comment.type === 'review-comment' && comment.lineNumber)
+      .map(comment => ({
+        ...comment,
+        prNumber: prInfo.number,
+        prTitle: prInfo.title,
+        prUrl: prInfo.url,
+      }));
+  }, [rawComments, prInfo]);
 
   // 코드를 라인별로 분리
   // children이 React element일 수 있으므로 텍스트 추출

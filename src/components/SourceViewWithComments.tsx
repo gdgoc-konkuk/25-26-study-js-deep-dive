@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import type { Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
+import { useComments } from '../contexts/CommentsContext';
 
 interface CommentWithPR extends Comment {
   prNumber: number;
@@ -14,61 +15,37 @@ interface CommentWithPR extends Comment {
 export default function SourceViewWithComments() {
   const pathname = usePathname();
   const [sourceCode, setSourceCode] = useState<string>('');
-  const [comments, setComments] = useState<CommentWithPR[]>([]);
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set());
   const [isSourceView, setIsSourceView] = useState(false);
 
+  // 현재 파일 경로 계산
+  const pathParts = pathname?.replace(/^\//, '').split('/') || [];
+  const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
+  const filePath = `src/content/${convertedPath}.mdx`;
+
+  // useComments 훅으로 댓글 데이터 가져오기 (동적 API 사용)
+  const { comments: rawComments, prInfo } = useComments(filePath);
+
+  // 댓글에 PR 정보 추가 (CommentWithPR 타입으로 변환)
+  const comments = useMemo<CommentWithPR[]>(() => {
+    if (!prInfo || !rawComments) return [];
+
+    // 인라인 리뷰 댓글만 필터링 (lineNumber가 있는 것만)
+    return rawComments
+      .filter(comment => comment.type === 'review-comment' && comment.lineNumber)
+      .map(comment => ({
+        ...comment,
+        prNumber: prInfo.number,
+        prTitle: prInfo.title,
+        prUrl: prInfo.url,
+      }));
+  }, [rawComments, prInfo]);
+
+  // MDX 소스 파일 가져오기
   useEffect(() => {
     if (!pathname || !isSourceView) return;
 
-    // URL 경로를 파일 경로로 변환
-    const pathParts = pathname.replace(/^\//, '').split('/');
-    const possiblePaths = [
-      `src/content/${pathParts.join('/')}.mdx`,
-      `src/content/${pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/')}.mdx`,
-      `src/content/${decodeURIComponent(pathname.replace(/^\//, ''))}.mdx`,
-      `src/content/${decodeURIComponent(pathname.replace(/^\//, '')).replace(/-/g, ' ')}.mdx`,
-    ];
-
-    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
-
-    // PR 댓글 가져오기
-    fetch(`${basePath}/data/prs-by-file.json`)
-      .then(res => res.json())
-      .then(data => {
-        let related: any[] = [];
-        for (const path of possiblePaths) {
-          if (data[path]) {
-            related = data[path];
-            break;
-          }
-        }
-
-        const fileComments: CommentWithPR[] = [];
-        related.forEach(({ pr, comments: prComments }) => {
-          prComments.forEach((comment: Comment) => {
-            if (comment.type === 'review-comment' && comment.lineNumber) {
-              fileComments.push({
-                ...comment,
-                prNumber: pr.number,
-                prTitle: pr.title,
-                prUrl: pr.url,
-              });
-            }
-          });
-        });
-
-        setComments(fileComments);
-      })
-      .catch((err) => {
-        console.error('[SourceView] Error fetching comments:', err);
-        setComments([]);
-      });
-
-    // MDX 소스 파일 가져오기
-    // GitHub raw URL을 사용하거나 public 폴더에 있는 경우
     const repoUrl = 'https://raw.githubusercontent.com/gdgoc-konkuk/prwiki/main';
-    const filePath = possiblePaths[1]; // 두 번째 경로가 가장 정확
 
     fetch(`${repoUrl}/${filePath}`)
       .then(res => {
@@ -82,7 +59,7 @@ export default function SourceViewWithComments() {
         console.error('[SourceView] Error fetching source:', err);
         setSourceCode('소스 파일을 불러올 수 없습니다.');
       });
-  }, [pathname, isSourceView]);
+  }, [pathname, isSourceView, filePath]);
 
   const toggleLine = (lineNum: number) => {
     const newExpanded = new Set(expandedLines);
