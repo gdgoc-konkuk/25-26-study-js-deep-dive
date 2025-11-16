@@ -24,7 +24,7 @@ export function CommentForm({
   onCancel,
   placeholder = '댓글을 입력하세요... (마크다운 지원)',
 }: CommentFormProps) {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, user, login, logout } = useAuth();
   const [body, setBody] = useState('');
   const [anonymousName, setAnonymousName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,12 +87,40 @@ export function CommentForm({
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
       <form onSubmit={handleSubmit} className="space-y-3">
+        {/* 로그인된 사용자 프로필 표시 */}
+        {isAuthenticated && user && (
+          <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <img
+                src={user.avatarUrl}
+                alt={user.name || user.login}
+                className="w-8 h-8 rounded-full"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {user.name || user.login}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  @{user.login}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              로그아웃
+            </button>
+          </div>
+        )}
+
         {/* 비로그인 시 익명 이름 입력 */}
         {!isAuthenticated && (
           <div>
-            <label htmlFor="anonymous-name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="anonymous-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               이름 (익명)
             </label>
             <input
@@ -101,7 +129,7 @@ export function CommentForm({
               value={anonymousName}
               onChange={(e) => setAnonymousName(e.target.value)}
               placeholder="익명"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               disabled={isSubmitting}
             />
           </div>
@@ -114,30 +142,30 @@ export function CommentForm({
             onChange={(e) => setBody(e.target.value)}
             placeholder={placeholder}
             rows={4}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y"
             disabled={isSubmitting}
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             마크다운 형식을 사용할 수 있습니다.
           </p>
         </div>
 
         {/* 에러 메시지 */}
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300">
             {error}
           </div>
         )}
 
         {/* 버튼 */}
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             {!isAuthenticated && (
               <p>
                 <button
                   type="button"
                   onClick={login}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                 >
                   GitHub로 로그인
                 </button>
@@ -151,7 +179,7 @@ export function CommentForm({
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                 disabled={isSubmitting}
               >
                 취소
@@ -160,7 +188,7 @@ export function CommentForm({
             <button
               type="submit"
               disabled={isSubmitting || !body.trim()}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? '작성 중...' : '댓글 작성'}
             </button>
