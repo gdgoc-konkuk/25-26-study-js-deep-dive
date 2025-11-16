@@ -216,68 +216,69 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
 
           range.surroundContents(highlight);
 
-          // 인라인 댓글 박스 생성 (클릭 시 표시/숨김)
-          if (activeCommentId === comment.id) {
-            const commentBox = document.createElement('div');
-            commentBox.className = 'inline-comment-box my-3 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r shadow-sm';
+          // 인라인 댓글 박스 생성 (항상 표시, 클릭 시 접기/펼치기)
+          const commentBox = document.createElement('div');
+          commentBox.className = `inline-comment-box my-3 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r shadow-sm ${
+            activeCommentId === comment.id ? 'hidden' : ''
+          }`;
+          commentBox.setAttribute('data-comment-id', comment.id.toString());
 
-            commentBox.innerHTML = `
+          commentBox.innerHTML = `
+            <a
+              href="${comment.prUrl}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-xs text-blue-600 dark:text-blue-400 hover:underline mb-2 block font-semibold"
+            >
+              #${comment.prNumber} ${comment.prTitle}
+            </a>
+
+            <div class="text-xs bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded border-l-4 border-yellow-500 mb-3">
+              <span class="text-gray-600 dark:text-gray-400 italic">"${comment.selectedText}"</span>
+            </div>
+
+            <div class="flex items-center gap-2 mb-2">
+              <img
+                src="${comment.author.avatarUrl}"
+                alt="${comment.author.name}"
+                class="w-6 h-6 rounded-full"
+              />
               <a
-                href="${comment.prUrl}"
+                href="${comment.author.profileUrl}"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="text-xs text-blue-600 dark:text-blue-400 hover:underline mb-2 block font-semibold"
+                class="text-sm font-medium hover:underline"
               >
-                #${comment.prNumber} ${comment.prTitle}
+                ${comment.author.name}
               </a>
+              <span class="text-xs text-gray-500">
+                ${new Date(comment.createdAt).toLocaleDateString('ko-KR')}
+              </span>
+            </div>
 
-              <div class="text-xs bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded border-l-4 border-yellow-500 mb-3">
-                <span class="text-gray-600 dark:text-gray-400 italic">"${comment.selectedText}"</span>
-              </div>
+            <div class="text-sm prose dark:prose-invert prose-sm max-w-none mb-2 bg-white dark:bg-gray-800 p-3 rounded">
+              ${comment.body.replace(/\n/g, '<br>')}
+            </div>
 
-              <div class="flex items-center gap-2 mb-2">
-                <img
-                  src="${comment.author.avatarUrl}"
-                  alt="${comment.author.name}"
-                  class="w-6 h-6 rounded-full"
-                />
-                <a
-                  href="${comment.author.profileUrl}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-sm font-medium hover:underline"
-                >
-                  ${comment.author.name}
-                </a>
-                <span class="text-xs text-gray-500">
-                  ${new Date(comment.createdAt).toLocaleDateString('ko-KR')}
-                </span>
-              </div>
+            <a
+              href="${comment.url}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-xs text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 mt-2 inline-block"
+            >
+              GitHub에서 보기 →
+            </a>
+          `;
 
-              <div class="text-sm prose dark:prose-invert prose-sm max-w-none mb-2 bg-white dark:bg-gray-800 p-3 rounded">
-                ${comment.body.replace(/\n/g, '<br>')}
-              </div>
-
-              <a
-                href="${comment.url}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-xs text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 mt-2 inline-block"
-              >
-                GitHub에서 보기 →
-              </a>
-            `;
-
-            // 하이라이트의 부모 요소 다음에 삽입
-            const parentElement = highlight.parentElement;
-            if (parentElement) {
-              // 부모의 다음 형제 요소 앞에 삽입
-              const nextSibling = parentElement.nextSibling;
-              if (nextSibling) {
-                parentElement.parentNode?.insertBefore(commentBox, nextSibling);
-              } else {
-                parentElement.parentNode?.appendChild(commentBox);
-              }
+          // 하이라이트의 부모 요소 다음에 삽입
+          const parentElement = highlight.parentElement;
+          if (parentElement) {
+            // 부모의 다음 형제 요소 앞에 삽입
+            const nextSibling = parentElement.nextSibling;
+            if (nextSibling) {
+              parentElement.parentNode?.insertBefore(commentBox, nextSibling);
+            } else {
+              parentElement.parentNode?.appendChild(commentBox);
             }
           }
 

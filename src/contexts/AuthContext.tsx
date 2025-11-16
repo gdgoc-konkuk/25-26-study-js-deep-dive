@@ -21,9 +21,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: true,
   });
 
-  // 인증 상태 가져오기
-  const fetchAuthStatus = async () => {
+  // 마지막 인증 확인 시간 (30초 throttle용)
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+
+  // 인증 상태 가져오기 (throttle 적용)
+  const fetchAuthStatus = async (force = false) => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime;
+
+    // 30초 이내에 확인했으면 skip (force가 true면 무시)
+    if (!force && timeSinceLastFetch < 30000) {
+      console.log(`[AuthContext] 인증 확인 skip (${Math.round(timeSinceLastFetch / 1000)}초 전 확인)`);
+      return;
+    }
+
     try {
+      console.log('[AuthContext] 인증 상태 확인 중...');
       const response = await fetch('/api/auth/status');
       const data = await response.json();
 
@@ -32,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: data.user || null,
         isLoading: false,
       });
+      setLastFetchTime(now);
     } catch (error) {
       console.error('인증 상태 확인 실패:', error);
       setAuthStatus({
@@ -39,19 +53,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: null,
         isLoading: false,
       });
+      setLastFetchTime(now);
     }
   };
 
   // 컴포넌트 마운트 시 인증 상태 확인
   useEffect(() => {
-    fetchAuthStatus();
+    // 초기 마운트 시에는 강제 확인
+    fetchAuthStatus(true);
 
     // 페이지 포커스 시 인증 상태 재확인 (OAuth 리다이렉트 후 돌아왔을 때)
+    // 30초 throttle 적용
     const handleFocus = () => {
       fetchAuthStatus();
     };
 
     // 페이지 visibility 변경 시 인증 상태 재확인
+    // 30초 throttle 적용
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchAuthStatus();

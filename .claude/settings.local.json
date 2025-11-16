@@ -1,28 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm dev:*)",
-      "Bash(timeout 10 bash:*)",
-      "Bash(nul)",
-      "Bash(dir:*)",
-      "Bash(cat:*)",
-      "Bash(pnpm prebuild:*)",
-      "Bash(node -e:*)",
-      "Bash(taskkill:*)",
-      "Bash(pnpm add:*)",
-      "Bash(timeout:*)",
-      "Bash(curl:*)",
-      "Bash(git fetch:*)",
-      "Bash(netstat:*)",
-      "Bash(findstr:*)",
-      "Bash(cmd /c \"taskkill /PID 25676 /F\")",
-      "Bash(powershell -Command:*)",
-      "Bash(pnpm run dev:*)",
-      "Bash(git remote:*)",
-      "Bash(cmd /c \"taskkill /PID 27288 /F\")",
-      "Bash(cmd /c \"taskkill /PID 21228 /F\")",
-      "Bash(pnpm run prebuild:fetch-prs:*)",
-      "Bash(pnpm run prebuild:*)"
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

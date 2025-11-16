@@ -3,6 +3,10 @@
 import { Octokit } from '@octokit/rest';
 import { App } from '@octokit/app';
 
+// Installation Token 캐시 (모듈 레벨)
+let cachedToken: string | null = null;
+let tokenExpiresAt: number = 0;
+
 /**
  * 사용자 OAuth 토큰으로 Octokit 클라이언트 생성
  * @param token - GitHub OAuth access token
@@ -16,9 +20,19 @@ export function getAuthenticatedClient(token: string): Octokit {
 
 /**
  * GitHub App으로 인증된 Octokit 인스턴스 생성 (비로그인 댓글용)
+ * Installation Token 캐싱 적용 (50분 유효)
  * @returns GitHub App으로 인증된 Octokit 인스턴스
  */
 export async function getBotClient(): Promise<Octokit> {
+  const now = Date.now();
+
+  // 캐시된 토큰이 있고 아직 유효하면 재사용
+  if (cachedToken && now < tokenExpiresAt) {
+    const remainingMinutes = Math.round((tokenExpiresAt - now) / 1000 / 60);
+    console.log(`✓ 캐시된 Installation Token 사용 (남은 시간: ${remainingMinutes}분)`);
+    return new Octokit({ auth: cachedToken });
+  }
+
   const appId = process.env.GITHUB_APP_ID;
   const privateKey = process.env.GITHUB_PRIVATE_KEY;
   const { owner, repo } = getRepositoryInfo();
@@ -27,7 +41,7 @@ export async function getBotClient(): Promise<Octokit> {
     throw new Error('GITHUB_APP_ID 및 GITHUB_PRIVATE_KEY 환경 변수가 설정되지 않았습니다.');
   }
 
-  console.log('🔐 GitHub App 인증 중...');
+  console.log('🔐 GitHub App 인증 중... (새 토큰 생성)');
   console.log(`   Repository: ${owner}/${repo}`);
 
   try {
@@ -55,6 +69,11 @@ export async function getBotClient(): Promise<Octokit> {
     }) as { token: string };
 
     console.log('   ✓ Installation Token 생성 완료');
+
+    // 토큰 캐싱 (50분 유효, 10분 안전 마진)
+    cachedToken = token;
+    tokenExpiresAt = Date.now() + 50 * 60 * 1000; // 50분
+    console.log('   ✓ Installation Token 캐시에 저장 (50분 유효)');
 
     // @octokit/rest의 Octokit 인스턴스 생성
     const octokit = new Octokit({
