@@ -50,6 +50,38 @@ function transformToPRSummary(data) {
 }
 
 /**
+ * 댓글 본문에서 메타데이터 파싱
+ */
+function parseCommentMetadata(body) {
+  const metadata = {};
+
+  // 메타데이터 형식: _파일: `경로`, 라인: 123_
+  // 또는: _파일: `경로`_
+  const metadataMatch = body.match(/^_파일: `([^`]+)`(?:, 라인: (\d+))?_/);
+
+  if (metadataMatch) {
+    metadata.filePath = metadataMatch[1];
+    if (metadataMatch[2]) {
+      metadata.lineNumber = parseInt(metadataMatch[2], 10);
+    }
+
+    // 메타데이터 다음에 인용문(선택된 텍스트)이 있는지 확인
+    // 형식: > 선택된 텍스트
+    const quotedTextMatch = body.match(/^_파일: `[^`]+`(?:, 라인: \d+)?_\n> (.+?)(?:\n\n|$)/s);
+    if (quotedTextMatch) {
+      metadata.selectedText = quotedTextMatch[1].trim();
+    }
+
+    // 메타데이터를 제외한 실제 댓글 내용 추출
+    metadata.cleanBody = body.replace(/^_파일: `[^`]+`(?:, 라인: \d+)?_\n(?:> .+?\n\n)?/s, '').trim();
+  } else {
+    metadata.cleanBody = body;
+  }
+
+  return metadata;
+}
+
+/**
  * PR의 모든 댓글을 통합 형태로 변환 (스레드별 정리 포함)
  */
 function transformToComments(data) {
@@ -58,6 +90,8 @@ function transformToComments(data) {
 
   // 일반 댓글
   comments.forEach((comment) => {
+    const metadata = parseCommentMetadata(comment.body);
+
     commentsMap.set(comment.id, {
       id: comment.id,
       author: {
@@ -65,11 +99,14 @@ function transformToComments(data) {
         avatarUrl: comment.user.avatar_url,
         profileUrl: comment.user.html_url,
       },
-      body: comment.body,
+      body: metadata.cleanBody || comment.body,
       createdAt: comment.created_at,
       updatedAt: comment.updated_at,
       url: comment.html_url,
-      type: 'comment',
+      type: metadata.lineNumber || metadata.selectedText ? 'review-comment' : 'comment',
+      ...(metadata.filePath && { filePath: metadata.filePath }),
+      ...(metadata.lineNumber && { lineNumber: metadata.lineNumber }),
+      ...(metadata.selectedText && { selectedText: metadata.selectedText }),
       reactions: comment.reactions || {
         '+1': 0,
         '-1': 0,
@@ -87,6 +124,8 @@ function transformToComments(data) {
 
   // 리뷰 댓글 (스레드 정보 포함)
   reviewComments.forEach((comment) => {
+    const metadata = parseCommentMetadata(comment.body);
+
     commentsMap.set(comment.id, {
       id: comment.id,
       author: {
@@ -94,13 +133,14 @@ function transformToComments(data) {
         avatarUrl: comment.user.avatar_url,
         profileUrl: comment.user.html_url,
       },
-      body: comment.body,
+      body: metadata.cleanBody || comment.body,
       createdAt: comment.created_at,
       updatedAt: comment.updated_at,
       url: comment.html_url,
       type: 'review-comment',
       filePath: comment.path,
       lineNumber: comment.line || comment.original_line,
+      ...(metadata.selectedText && { selectedText: metadata.selectedText }),
       reactions: comment.reactions || {
         '+1': 0,
         '-1': 0,
@@ -296,7 +336,11 @@ async function main() {
   console.log('🚀 Starting PR data generation...');
 
   // 1. GitHub에서 merged PR 동기화
-  await syncMergedPRs();
+  try {
+    await syncMergedPRs();
+  } catch (error) {
+    console.log('⚠️  Failed to sync from GitHub, using local data only:', error.message);
+  }
 
   // 2. output 디렉토리 생성
   await mkdir(OUTPUT_DIR, { recursive: true });

@@ -15,7 +15,7 @@ export default async function handler(
     return;
   }
 
-  const { filePath, body, lineNumber, inReplyTo, anonymousName }: CreateCommentRequest = req.body;
+  const { filePath, body, lineNumber, selectedText, inReplyTo, anonymousName }: CreateCommentRequest = req.body;
 
   // 필수 파라미터 검증
   if (!filePath || !body) {
@@ -56,19 +56,29 @@ export default async function handler(
 ${body}`;
     }
 
-    // 3. 댓글 작성
+    // 3. 메타데이터 구성
+    let metadata = `_파일: \`${filePath}\``;
+    if (lineNumber) {
+      metadata += `, 라인: ${lineNumber}`;
+    }
+    if (selectedText) {
+      metadata += `_\n> ${selectedText}\n\n`;
+    } else {
+      metadata += '_\n\n';
+    }
+
+    // 4. 댓글 작성
     let comment;
 
-    if (lineNumber) {
-      // 코드 리뷰 댓글 (파일 + 라인 번호 지정)
+    if (lineNumber || selectedText) {
+      // 코드 리뷰 댓글 또는 텍스트 선택 댓글
       // 주의: 코드 리뷰 댓글은 PR이 open 상태일 때만 가능
       // merged PR에는 일반 댓글만 추가 가능
-      // 따라서 여기서는 일반 댓글로 작성
       const { data } = await octokit.issues.createComment({
         owner,
         repo,
         issue_number: prNumber,
-        body: `_파일: \`${filePath}\`, 라인: ${lineNumber}_\n\n${commentBody}`,
+        body: `${metadata}${commentBody}`,
       });
       comment = data;
     } else if (inReplyTo) {

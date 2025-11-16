@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import type { Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
+import { useComments } from '../contexts/CommentsContext';
 
 interface CommentWithPR extends Comment {
   prNumber: number;
@@ -19,7 +20,7 @@ interface MDXWithInlineCommentsProps {
 
 export default function MDXWithInlineComments({ children, sourceCode }: MDXWithInlineCommentsProps) {
   const pathname = usePathname();
-  const [comments, setComments] = useState<CommentWithPR[]>([]);
+
   const [showReviews, setShowReviews] = useState(true); // 리뷰 표시/숨김
   const [showSource, setShowSource] = useState(false); // 소스 코드 뷰 (디버그용)
   const [selectedLine, setSelectedLine] = useState<{ start: number; end: number } | null>(null);
@@ -48,56 +49,31 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
   const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
   const filePath = `src/content/${convertedPath}.mdx`;
 
-  useEffect(() => {
-    if (!pathname) return;
+  // useComments 훅으로 댓글 데이터 가져오기 (동적 API 사용)
+  const { comments: rawComments, prInfo, refetch } = useComments(filePath);
 
-    const possiblePaths = [
-      `src/content/${pathParts.join('/')}.mdx`,
-      `src/content/${pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/')}.mdx`,
-      `src/content/${decodeURIComponent(pathname.replace(/^\//, ''))}.mdx`,
-      `src/content/${decodeURIComponent(pathname.replace(/^\//, '')).replace(/-/g, ' ')}.mdx`,
-    ];
+  // 댓글에 PR 정보 추가 (CommentWithPR 타입으로 변환)
+  const comments = useMemo<CommentWithPR[]>(() => {
+    if (!prInfo || !rawComments) return [];
 
-    const basePath = process.env.NODE_ENV === 'production' ? '/prwiki' : '';
-
-    // PR 댓글 가져오기
-    fetch(`${basePath}/data/prs-by-file.json`)
-      .then(res => res.json())
-      .then(data => {
-        let related: any[] = [];
-        for (const path of possiblePaths) {
-          if (data[path]) {
-            related = data[path];
-            break;
-          }
-        }
-
-        const fileComments: CommentWithPR[] = [];
-        related.forEach(({ pr, comments: prComments }) => {
-          prComments.forEach((comment: Comment) => {
-            if (comment.type === 'review-comment' && comment.lineNumber) {
-              fileComments.push({
-                ...comment,
-                prNumber: pr.number,
-                prTitle: pr.title,
-                prUrl: pr.url,
-              });
-            }
-          });
-        });
-
-        setComments(fileComments);
-      })
-      .catch(() => setComments([]));
-  }, [pathname]);
+    // 인라인 리뷰 댓글만 필터링 (lineNumber가 있는 것만)
+    return rawComments
+      .filter(comment => comment.type === 'review-comment' && comment.lineNumber)
+      .map(comment => ({
+        ...comment,
+        prNumber: prInfo.number,
+        prTitle: prInfo.title,
+        prUrl: prInfo.url,
+      }));
+  }, [rawComments, prInfo]);
 
   // 댓글 작성 성공 핸들러
   const handleCommentSuccess = () => {
     setSelectedLine(null);
     setDragStart(null);
     setIsDragging(false);
-    // 댓글 목록 새로고침을 위해 페이지 리로드 (임시)
-    window.location.reload();
+    // 댓글 목록 새로고침 (CommentsContext 사용)
+    setTimeout(() => refetch(), 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
   };
 
   // 드래그 시작
@@ -181,8 +157,8 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
     setSelectedText('');
     setSelectionPosition(null);
     window.getSelection()?.removeAllRanges();
-    // 댓글 목록 새로고침
-    window.location.reload();
+    // 댓글 목록 새로고침 (CommentsContext 사용)
+    setTimeout(() => refetch(), 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
   };
 
   // 텍스트 하이라이트 및 클릭 이벤트 등록

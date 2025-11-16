@@ -20,7 +20,9 @@
       "Bash(pnpm run dev:*)",
       "Bash(git remote:*)",
       "Bash(cmd /c \"taskkill /PID 27288 /F\")",
-      "Bash(cmd /c \"taskkill /PID 21228 /F\")"
+      "Bash(cmd /c \"taskkill /PID 21228 /F\")",
+      "Bash(pnpm run prebuild:fetch-prs:*)",
+      "Bash(pnpm run prebuild:*)"
     ],
     "deny": [],
     "ask": []
