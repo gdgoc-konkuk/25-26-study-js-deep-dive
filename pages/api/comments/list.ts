@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getBotClient, getRepositoryInfo } from '../../../src/lib/github';
 import { getOrCreateTargetPR } from '../../../src/lib/pr-manager';
+import type { CommentsListResponse, ApiError } from '../../../src/types/api';
 
 /**
  * 특정 파일 또는 PR의 댓글 목록을 GitHub API에서 직접 가져오기
@@ -9,7 +10,7 @@ import { getOrCreateTargetPR } from '../../../src/lib/pr-manager';
  */
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<CommentsListResponse | ApiError>
 ) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -39,21 +40,30 @@ export default async function handler(
       prNumber = parseInt(prNumberParam as string);
     }
 
-    // PR 이슈 댓글 가져오기
-    const { data: issueComments } = await octokit.issues.listComments({
-      owner,
-      repo,
-      issue_number: prNumber,
-      per_page: 100,
-    });
-
-    // PR 리뷰 댓글 가져오기
-    const { data: reviewComments } = await octokit.pulls.listReviewComments({
-      owner,
-      repo,
-      pull_number: prNumber,
-      per_page: 100,
-    });
+    // PR 이슈 댓글, 리뷰 댓글, PR 정보를 병렬로 가져오기 (성능 최적화)
+    const [
+      { data: issueComments },
+      { data: reviewComments },
+      { data: prData },
+    ] = await Promise.all([
+      octokit.issues.listComments({
+        owner,
+        repo,
+        issue_number: prNumber,
+        per_page: 100,
+      }),
+      octokit.pulls.listReviewComments({
+        owner,
+        repo,
+        pull_number: prNumber,
+        per_page: 100,
+      }),
+      octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: prNumber,
+      }),
+    ]);
 
     // 댓글 데이터 변환
     const comments = [
@@ -117,13 +127,7 @@ export default async function handler(
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
 
-    // PR 정보도 함께 반환
-    const { data: prData } = await octokit.pulls.get({
-      owner,
-      repo,
-      pull_number: prNumber,
-    });
-
+    // PR 정보와 함께 반환 (이미 Promise.all에서 가져옴)
     res.status(200).json({
       comments,
       prNumber,

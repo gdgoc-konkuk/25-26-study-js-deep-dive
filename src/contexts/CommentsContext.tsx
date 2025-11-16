@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import type { Comment } from '../types/pr';
 
 // PR 정보 타입
@@ -122,13 +122,13 @@ export function useComments(filePath: string) {
     await loadComments(filePath);
   }, [filePath, loadComments]);
 
-  // 초기 로드
-  const [initialized, setInitialized] = useState(false);
-
-  if (!initialized && !data.isLoading && data.comments.length === 0 && !data.error) {
-    setInitialized(true);
-    loadComments(filePath);
-  }
+  // 초기 로드 - useEffect로 이동
+  useEffect(() => {
+    // 데이터가 없고, 로딩 중이 아니고, 에러가 없으면 로드
+    if (data.comments.length === 0 && !data.isLoading && !data.error) {
+      loadComments(filePath);
+    }
+  }, [filePath]); // filePath 변경 시에만 재실행
 
   return {
     comments: data.comments,

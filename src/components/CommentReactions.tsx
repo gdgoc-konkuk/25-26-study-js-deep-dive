@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 interface Reactions {
   '+1': number;
   '-1': number;
@@ -24,7 +26,7 @@ const REACTION_EMOJIS: Record<keyof Reactions, string> = {
   eyes: '👀',
 };
 
-export default function CommentReactions({ reactions }: CommentReactionsProps) {
+const CommentReactions = memo(function CommentReactions({ reactions }: CommentReactionsProps) {
   const hasReactions = Object.values(reactions).some(count => count > 0);
 
   if (!hasReactions) return null;
@@ -47,4 +49,6 @@ export default function CommentReactions({ reactions }: CommentReactionsProps) {
       })}
     </div>
   );
-}
+});
+
+export default CommentReactions;

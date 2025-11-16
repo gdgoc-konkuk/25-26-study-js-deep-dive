@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import type { PRWithComments, Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
+import { useComments } from '../contexts/CommentsContext';
 
 interface PRCommentsProps {
   filePath: string;
@@ -12,7 +13,7 @@ interface PRCommentsProps {
 /**
  * 개별 댓글을 렌더링하는 컴포넌트
  */
-function CommentItem({ comment, depth = 0 }: { comment: Comment; depth?: number }) {
+const CommentItem = memo(function CommentItem({ comment, depth = 0 }: { comment: Comment; depth?: number }) {
   // Tailwind의 동적 클래스 생성 문제를 방지하기 위해 고정된 클래스 매핑 사용
   const getIndentClass = (depth: number) => {
     if (depth === 0) return '';
@@ -80,77 +81,48 @@ function CommentItem({ comment, depth = 0 }: { comment: Comment; depth?: number 
       )}
     </div>
   );
-}
+});
 
 export default function PRComments({ filePath }: PRCommentsProps) {
-  const [prComments, setPRComments] = useState<PRWithComments[]>([]);
   const [showCommentForm, setShowCommentForm] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 댓글 로드 함수 (API 직접 호출)
-  const loadComments = async () => {
-    setIsRefreshing(true);
-    try {
-      console.log('[PRComments] 파일에 대한 댓글 로드:', filePath);
-      const response = await fetch(`/api/comments/list?filePath=${encodeURIComponent(filePath)}`);
+  // useComments 훅 사용 - 중복 코드 제거!
+  const { comments, prInfo, isLoading, refetch } = useComments(filePath);
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch comments');
-      }
+  // PR 데이터 구성
+  const prComments: PRWithComments[] = useMemo(() => {
+    if (!prInfo || comments.length === 0) return [];
 
-      const data = await response.json();
-      console.log('[PRComments] 받아온 댓글:', data.comments);
-      console.log('[PRComments] PR 정보:', { prNumber: data.prNumber, prTitle: data.prTitle });
-
-      // 댓글을 PR별로 그룹화 (간단하게 하나의 PR로 처리)
-      if (data.comments && data.comments.length > 0) {
-        setPRComments([{
-          pr: {
-            number: data.prNumber,
-            title: data.prTitle,
-            state: 'merged' as const,
-            author: {
-              name: 'Unknown',
-              avatarUrl: '',
-              profileUrl: '',
-            },
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            mergedAt: new Date(),
-            url: data.prUrl,
-            labels: [],
-            commentCount: data.comments.length,
-            reviewCount: 0,
-            changedFiles: [],
-            additions: 0,
-            deletions: 0,
-          },
-          comments: data.comments,
-        }]);
-      } else {
-        setPRComments([]);
-      }
-    } catch (error) {
-      console.error('[PRComments] 댓글 로드 실패:', error);
-      setPRComments([]);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // 초기 데이터 로드
-  useEffect(() => {
-    loadComments();
-  }, [filePath]);
-
-  // 실시간 댓글 새로고침 함수
-  const refreshComments = loadComments;
+    return [{
+      pr: {
+        number: prInfo.number,
+        title: prInfo.title,
+        state: 'merged' as const,
+        author: {
+          name: 'Unknown',
+          avatarUrl: '',
+          profileUrl: '',
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        mergedAt: new Date(),
+        url: prInfo.url,
+        labels: [],
+        commentCount: comments.length,
+        reviewCount: 0,
+        changedFiles: [],
+        additions: 0,
+        deletions: 0,
+      },
+      comments,
+    }];
+  }, [comments, prInfo]);
 
   const handleCommentSuccess = () => {
     setShowCommentForm(false);
     // 댓글 작성 후 즉시 새로고침
     setTimeout(() => {
-      refreshComments();
+      refetch();
     }, 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
   };
 
@@ -160,11 +132,11 @@ export default function PRComments({ filePath }: PRCommentsProps) {
         <h2 className="text-2xl font-bold">💬 PR 댓글</h2>
         {prComments.length > 0 && (
           <button
-            onClick={refreshComments}
-            disabled={isRefreshing}
+            onClick={refetch}
+            disabled={isLoading}
             className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isRefreshing ? '새로고침 중...' : '🔄 새로고침'}
+            {isLoading ? '새로고침 중...' : '🔄 새로고침'}
           </button>
         )}
       </div>

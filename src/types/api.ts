@@ -1,6 +1,7 @@
 // API 요청/응답 타입 정의
 
 import type { User } from './auth';
+import type { Comment } from './pr';
 
 /**
  * API 에러 응답
@@ -18,6 +19,7 @@ export interface CreateCommentRequest {
   filePath: string; // 파일 경로 (예: "docs/01-변수.mdx")
   body: string; // 댓글 내용 (마크다운)
   lineNumber?: number; // 라인 번호 (코드 리뷰 댓글인 경우)
+  selectedText?: string; // 선택된 텍스트 (텍스트 선택 댓글인 경우)
   inReplyTo?: number; // 답글인 경우 부모 댓글 ID
   anonymousName?: string; // 비로그인 시 작성자 이름 (선택)
 }
@@ -81,4 +83,14 @@ export interface AuthStatusResponse {
  */
 export interface LogoutResponse {
   success: boolean;
+}
+
+/**
+ * 댓글 목록 조회 응답
+ */
+export interface CommentsListResponse {
+  comments: Comment[];
+  prNumber: number;
+  prTitle: string;
+  prUrl: string;
 }

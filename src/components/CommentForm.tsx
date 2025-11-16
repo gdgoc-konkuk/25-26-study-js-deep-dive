@@ -10,6 +10,7 @@ import type { CreateCommentRequest } from '@/types/api';
 interface CommentFormProps {
   filePath: string; // 현재 파일 경로
   lineNumber?: number; // 라인 번호 (코드 리뷰 댓글)
+  selectedText?: string; // 선택된 텍스트 (텍스트 선택 댓글)
   inReplyTo?: number; // 답글인 경우 부모 댓글 ID
   onSuccess?: (commentId: number) => void; // 댓글 작성 성공 시 콜백
   onCancel?: () => void; // 취소 시 콜백
@@ -19,6 +20,7 @@ interface CommentFormProps {
 export function CommentForm({
   filePath,
   lineNumber,
+  selectedText,
   inReplyTo,
   onSuccess,
   onCancel,
@@ -52,6 +54,7 @@ export function CommentForm({
         filePath,
         body: body.trim(),
         lineNumber,
+        selectedText,
         inReplyTo,
         anonymousName: !isAuthenticated ? anonymousName.trim() : undefined,
       };

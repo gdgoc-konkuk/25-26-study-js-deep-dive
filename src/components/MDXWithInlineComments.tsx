@@ -20,11 +20,18 @@ interface MDXWithInlineCommentsProps {
 export default function MDXWithInlineComments({ children, sourceCode }: MDXWithInlineCommentsProps) {
   const pathname = usePathname();
   const [comments, setComments] = useState<CommentWithPR[]>([]);
-  const [showSource, setShowSource] = useState(false);
+  const [showReviews, setShowReviews] = useState(true); // 리뷰 표시/숨김
+  const [showSource, setShowSource] = useState(false); // 소스 코드 뷰 (디버그용)
   const [selectedLine, setSelectedLine] = useState<{ start: number; end: number } | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<number | null>(null);
+
+  // 텍스트 선택 관련 state
+  const [selectedText, setSelectedText] = useState<string>('');
+  const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
+  const [showCommentButton, setShowCommentButton] = useState(false);
+  const [showCommentForm, setShowCommentForm] = useState(false);
 
   // sourceCode를 라인별로 분리
   const sourceLines = sourceCode ? sourceCode.split('\n') : [];
@@ -121,6 +128,56 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
     return lineNum >= selectedLine.start && lineNum <= selectedLine.end;
   };
 
+  // 텍스트 선택 핸들러
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+
+    if (text && text.length > 0) {
+      setSelectedText(text);
+
+      // 선택 영역의 위치 계산
+      const range = selection?.getRangeAt(0);
+      const rect = range?.getBoundingClientRect();
+
+      if (rect) {
+        setSelectionPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top - 10, // 선택 영역 위에 버튼 표시
+        });
+        setShowCommentButton(true);
+      }
+    } else {
+      setShowCommentButton(false);
+      setSelectedText('');
+      setSelectionPosition(null);
+    }
+  };
+
+  // 댓글 작성 시작
+  const handleStartComment = () => {
+    setShowCommentButton(false);
+    setShowCommentForm(true);
+  };
+
+  // 댓글 작성 취소
+  const handleCancelComment = () => {
+    setShowCommentForm(false);
+    setSelectedText('');
+    setSelectionPosition(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  // 댓글 작성 완료
+  const handleTextCommentSuccess = () => {
+    setShowCommentForm(false);
+    setSelectedText('');
+    setSelectionPosition(null);
+    window.getSelection()?.removeAllRanges();
+    // 댓글 목록 새로고침
+    window.location.reload();
+  };
+
   const commentsByLine = comments.reduce((acc, comment) => {
     const lineNum = comment.lineNumber || 0;
     if (!acc[lineNum]) acc[lineNum] = [];
@@ -135,35 +192,43 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
 
   return (
     <div className="relative">
-      {/* 토글 버튼 */}
-      <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">💬</span>
-            <div>
-              <h3 className="font-bold text-blue-900 dark:text-blue-100">
-                {comments.length > 0 ? `PR 리뷰 댓글 ${comments.length}개 발견` : '코드 리뷰 모드'}
-              </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                {comments.length > 0
-                  ? '각 라인의 리뷰 댓글을 소스와 함께 확인하세요'
-                  : '소스 뷰에서 각 라인에 마우스를 올리고 + 버튼을 클릭하여 리뷰 댓글을 작성하세요'}
-              </p>
+      {/* 리뷰 모드 토글 */}
+      {(comments.length > 0 || showSource) && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💬</span>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  {comments.length > 0 ? `리뷰 댓글 ${comments.length}개` : '리뷰 모드'}
+                </h3>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {comments.length > 0 && (
+                <button
+                  onClick={() => setShowReviews(!showReviews)}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {showReviews ? '💬 리뷰 숨기기' : '💬 리뷰 보기'}
+                </button>
+              )}
+              {sourceCode && (
+                <button
+                  onClick={() => setShowSource(!showSource)}
+                  className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  {showSource ? '📄 렌더링 보기' : '🔧 소스 보기'}
+                </button>
+              )}
             </div>
           </div>
-          <button
-            onClick={() => setShowSource(!showSource)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {showSource ? '렌더링 보기' : '소스 + 리뷰 보기'}
-          </button>
         </div>
-      </div>
+      )}
 
-      {/* 조건부 렌더링 */}
-      {showSource && sourceLines.length > 0 ? (
-        // 소스 + 인라인 댓글 뷰
-        <div className="border rounded-lg overflow-hidden">
+      {/* 소스 코드 뷰 (디버그용) */}
+      {showSource && sourceLines.length > 0 && (
+        <div className="border rounded-lg overflow-hidden mb-4">
           <div className="bg-gray-50 dark:bg-gray-800 p-2 border-b flex items-center justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">
               📄 MDX 소스 (PR 리뷰 포함)
@@ -363,9 +428,57 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
             })}
           </pre>
         </div>
-      ) : (
-        // 일반 렌더링된 MDX
-        <>{children}</>
+      )}
+
+      {/* 렌더링된 MDX (항상 표시) */}
+      <div
+        className="rendered-mdx"
+        onMouseUp={handleTextSelection}
+      >
+        {children}
+      </div>
+
+      {/* Floating 댓글 버튼 */}
+      {showCommentButton && selectionPosition && (
+        <button
+          onClick={handleStartComment}
+          className="fixed z-50 bg-blue-600 text-white px-3 py-1.5 rounded-lg shadow-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          style={{
+            left: `${selectionPosition.x}px`,
+            top: `${selectionPosition.y}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          💬 댓글 작성
+        </button>
+      )}
+
+      {/* 댓글 작성 폼 (Floating) */}
+      {showCommentForm && selectionPosition && (
+        <div
+          className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-4 max-w-md"
+          style={{
+            left: `${selectionPosition.x}px`,
+            top: `${selectionPosition.y + 20}px`,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="mb-3">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              선택된 텍스트에 댓글 작성
+            </h4>
+            <div className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded border-l-4 border-blue-500">
+              <span className="text-gray-600 dark:text-gray-400 italic">"{selectedText}"</span>
+            </div>
+          </div>
+          <CommentForm
+            filePath={filePath}
+            selectedText={selectedText}
+            onSuccess={handleTextCommentSuccess}
+            onCancel={handleCancelComment}
+            placeholder="선택한 텍스트에 대한 댓글을 작성하세요..."
+          />
+        </div>
       )}
     </div>
   );

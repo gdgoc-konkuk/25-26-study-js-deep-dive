@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import type { PRWithComments, Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
+import { useComments } from '../contexts/CommentsContext';
 
 interface CommentWithLine extends Comment {
   prNumber: number;
@@ -13,7 +14,7 @@ interface CommentWithLine extends Comment {
   prUrl: string;
 }
 
-function CommentThreadSidebar({ comment, prUrl, prNumber, prTitle }: {
+const CommentThreadSidebar = memo(function CommentThreadSidebar({ comment, prUrl, prNumber, prTitle }: {
   comment: Comment;
   prUrl: string;
   prNumber: number;
@@ -120,121 +121,52 @@ function CommentThreadSidebar({ comment, prUrl, prNumber, prTitle }: {
       )}
     </div>
   );
-}
+});
 
 export default function CommentSidebar() {
   const pathname = usePathname();
-  const [comments, setComments] = useState<CommentWithLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
-  const [currentFilePath, setCurrentFilePath] = useState<string>('');
-  const [relatedPRs, setRelatedPRs] = useState<PRWithComments[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // pathname을 filePath로 변환
+  const filePath = useMemo(() => {
+    const pathParts = pathname.replace(/^\//, '').split('/');
+    const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
+    return `src/content/${convertedPath}.mdx`;
+  }, [pathname]);
+
+  // useComments 훅 사용 - 중복 코드 대폭 제거!
+  const { comments: rawComments, prInfo, isLoading, refetch } = useComments(filePath);
+
+  // 댓글에 PR 정보 추가 및 라인 번호 정렬
+  const comments = useMemo(() => {
+    if (!prInfo || !rawComments) return [];
+
+    const commentsWithPR: CommentWithLine[] = rawComments.map(comment => ({
+      ...comment,
+      prNumber: prInfo.number,
+      prTitle: prInfo.title,
+      prUrl: prInfo.url,
+    }));
+
+    // 라인 번호 순으로 정렬
+    return commentsWithPR.sort((a, b) => {
+      if (!a.lineNumber) return 1;
+      if (!b.lineNumber) return -1;
+      return a.lineNumber - b.lineNumber;
+    });
+  }, [rawComments, prInfo]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 초기 데이터 로드 함수
-  const loadComments = async () => {
-    // URL 경로를 파일 경로로 변환
-    const pathParts = pathname.replace(/^\//, '').split('/');
-    const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
-    const filePath = `src/content/${convertedPath}.mdx`;
-
-    console.log('[CommentSidebar] 파일에 대한 댓글 로드:', filePath);
-    setCurrentFilePath(filePath);
-
-    try {
-      const response = await fetch(`/api/comments/list?filePath=${encodeURIComponent(filePath)}`);
-
-      if (!response.ok) {
-        console.log('[CommentSidebar] API 응답 실패:', response.status);
-        setComments([]);
-        setRelatedPRs([]);
-        return;
-      }
-
-      const data = await response.json();
-      console.log('[CommentSidebar] 받아온 댓글:', data.comments);
-      console.log('[CommentSidebar] PR 정보:', { prNumber: data.prNumber, prTitle: data.prTitle });
-
-      // 댓글 목록 재구성
-      const allComments: CommentWithLine[] = [];
-      if (data.comments && data.comments.length > 0) {
-        data.comments.forEach((comment: any) => {
-          allComments.push({
-            ...comment,
-            prNumber: data.prNumber,
-            prTitle: data.prTitle,
-            prUrl: data.prUrl,
-          });
-        });
-
-        // PR 정보 업데이트
-        setRelatedPRs([{
-          pr: {
-            number: data.prNumber,
-            title: data.prTitle,
-            state: 'merged' as const,
-            author: {
-              name: 'Unknown',
-              avatarUrl: '',
-              profileUrl: '',
-            },
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            mergedAt: new Date(),
-            url: data.prUrl,
-            labels: [],
-            commentCount: data.comments.length,
-            reviewCount: 0,
-            changedFiles: [],
-            additions: 0,
-            deletions: 0,
-          },
-          comments: data.comments,
-        }]);
-      } else {
-        setRelatedPRs([]);
-      }
-
-      // 라인 번호 순으로 정렬
-      allComments.sort((a, b) => {
-        if (!a.lineNumber) return 1;
-        if (!b.lineNumber) return -1;
-        return a.lineNumber - b.lineNumber;
-      });
-
-      setComments(allComments);
-      console.log('[CommentSidebar] final comments:', allComments);
-    } catch (error) {
-      console.error('[CommentSidebar] 댓글 로드 실패:', error);
-      setComments([]);
-      setRelatedPRs([]);
-    }
-  };
-
-  useEffect(() => {
-    loadComments();
-  }, [pathname]);
-
-  // 실시간 댓글 새로고침 함수
-  const refreshComments = async () => {
-    setIsRefreshing(true);
-    try {
-      await loadComments();
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   const handleCommentSuccess = () => {
     setShowCommentForm(false);
     // 댓글 작성 후 즉시 새로고침
     setTimeout(() => {
-      refreshComments();
+      refetch();
     }, 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
   };
 
@@ -273,13 +205,13 @@ export default function CommentSidebar() {
               ✕
             </button>
           </div>
-          {relatedPRs.length > 0 && (
+          {prInfo && (
             <button
-              onClick={refreshComments}
-              disabled={isRefreshing}
+              onClick={refetch}
+              disabled={isLoading}
               className="w-full px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isRefreshing ? '새로고침 중...' : '🔄 최신 댓글 가져오기'}
+              {isLoading ? '새로고침 중...' : '🔄 최신 댓글 가져오기'}
             </button>
           )}
         </div>
@@ -308,14 +240,14 @@ export default function CommentSidebar() {
               <button
                 onClick={() => setShowCommentForm(true)}
                 className="w-full rounded-md border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                disabled={!currentFilePath}
+                disabled={!filePath}
               >
                 ✍️ 새 댓글 작성하기
               </button>
             ) : (
-              currentFilePath && (
+              filePath && (
                 <CommentForm
-                  filePath={currentFilePath}
+                  filePath={filePath}
                   onSuccess={handleCommentSuccess}
                   onCancel={() => setShowCommentForm(false)}
                 />

@@ -158,6 +158,7 @@ export interface Comment {
   type: 'comment' | 'review-comment' | 'review';
   filePath?: string; // review comment인 경우
   lineNumber?: number; // review comment인 경우
+  selectedText?: string; // 텍스트 선택 댓글인 경우
   reactions: {
     '+1': number;
     '-1': number;
