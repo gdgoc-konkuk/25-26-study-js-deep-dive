@@ -188,7 +188,8 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
               const isSelected = isLineSelected(lineNum);
               const isSelectionStart = selectedLine && lineNum === selectedLine.start;
               const isSelectionEnd = selectedLine && lineNum === selectedLine.end;
-              const shouldShowCommentForm = selectedLine && lineNum === selectedLine.end;
+              // 드래그가 완료된 후(isDragging === false)에만 댓글 폼 표시
+              const shouldShowCommentForm = !isDragging && selectedLine && lineNum === selectedLine.end;
 
               return (
                 <div key={index}>
