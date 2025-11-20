@@ -1,16 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
-import type { Comment } from '../types/pr';
+import type { CommentWithPR } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { useComments } from '../contexts/CommentsContext';
-
-interface CommentWithPR extends Comment {
-  prNumber: number;
-  prTitle: string;
-  prUrl: string;
-}
+import { useFilePath } from '../hooks/useFilePath';
 
 interface CodeBlockWithCommentsProps {
   children: React.ReactNode;
@@ -23,13 +17,10 @@ export default function CodeBlockWithComments({
   className,
   ...props
 }: CodeBlockWithCommentsProps) {
-  const pathname = usePathname();
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set());
 
-  // 현재 파일 경로 계산
-  const pathParts = pathname?.replace(/^\//, '').split('/') || [];
-  const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
-  const filePath = `src/content/${convertedPath}.mdx`;
+  // 현재 파일 경로 (useFilePath 훅 사용)
+  const filePath = useFilePath();
 
   // useComments 훅으로 댓글 데이터 가져오기 (동적 API 사용)
   const { comments: rawComments, prInfo } = useComments(filePath);

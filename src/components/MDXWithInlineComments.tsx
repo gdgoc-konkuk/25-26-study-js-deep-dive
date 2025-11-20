@@ -1,17 +1,11 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
-import type { Comment } from '../types/pr';
+import type { CommentWithPR } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
 import { useComments } from '../contexts/CommentsContext';
-
-interface CommentWithPR extends Comment {
-  prNumber: number;
-  prTitle: string;
-  prUrl: string;
-}
+import { useFilePath } from '../hooks/useFilePath';
 
 interface MDXWithInlineCommentsProps {
   children: React.ReactNode;
@@ -19,8 +13,6 @@ interface MDXWithInlineCommentsProps {
 }
 
 export default function MDXWithInlineComments({ children, sourceCode }: MDXWithInlineCommentsProps) {
-  const pathname = usePathname();
-
   const [showReviews, setShowReviews] = useState(true); // 리뷰 표시/숨김
   const [showSource, setShowSource] = useState(false); // 소스 코드 뷰 (디버그용)
   const [selectedLine, setSelectedLine] = useState<{ start: number; end: number } | null>(null);
@@ -43,10 +35,8 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
   // sourceCode를 라인별로 분리
   const sourceLines = sourceCode ? sourceCode.split('\n') : [];
 
-  // 현재 파일 경로 계산
-  const pathParts = pathname?.replace(/^\//, '').split('/') || [];
-  const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
-  const filePath = `src/content/${convertedPath}.mdx`;
+  // 현재 파일 경로 (useFilePath 훅 사용)
+  const filePath = useFilePath();
 
   // useComments 훅으로 댓글 데이터 가져오기 (동적 API 사용)
   const { comments: rawComments, prInfo, refetch } = useComments(filePath);

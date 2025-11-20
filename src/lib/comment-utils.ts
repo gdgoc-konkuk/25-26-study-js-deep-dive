@@ -2,8 +2,6 @@
  * 댓글 관련 유틸리티 함수
  */
 
-import type { PRInfo } from '../contexts/CommentsContext';
-
 /**
  * GitHub Reactions 객체를 표준 형식으로 변환
  * @param reactions GitHub API에서 받은 reactions 객체
@@ -21,25 +19,6 @@ export function transformReactions(reactions: any) {
     heart: reactions.heart || 0,
     rocket: reactions.rocket || 0,
     eyes: reactions.eyes || 0,
-  };
-}
-
-/**
- * PR 요약 정보 객체 생성
- * @param prNumber PR 번호
- * @param prTitle PR 제목
- * @param prUrl PR URL
- * @returns PRInfo 객체
- */
-export function buildPRSummary(
-  prNumber: number,
-  prTitle: string,
-  prUrl: string
-): PRInfo {
-  return {
-    number: prNumber,
-    title: prTitle,
-    url: prUrl,
   };
 }
 

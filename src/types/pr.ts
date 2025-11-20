@@ -177,3 +177,10 @@ export interface PRWithComments {
   pr: PRSummary;
   comments: Comment[];
 }
+
+// PR 정보가 포함된 댓글 (컴포넌트에서 자주 사용)
+export interface CommentWithPR extends Comment {
+  prNumber: number;
+  prTitle: string;
+  prUrl: string;
+}

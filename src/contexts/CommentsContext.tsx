@@ -28,30 +28,28 @@ interface CommentsContextType {
 
 const CommentsContext = createContext<CommentsContextType | undefined>(undefined);
 
+// 기본 데이터 구조 (상수로 선언하여 재사용)
+const DEFAULT_COMMENT_DATA: CommentData = {
+  comments: [],
+  prInfo: null,
+  isLoading: false,
+  error: null,
+};
+
 export function CommentsProvider({ children }: { children: ReactNode }) {
   // filePath를 키로 하는 댓글 데이터 맵
   const [commentsMap, setCommentsMap] = useState<Map<string, CommentData>>(new Map());
 
-  // 기본 데이터 구조
-  const getDefaultData = (): CommentData => ({
-    comments: [],
-    prInfo: null,
-    isLoading: false,
-    error: null,
-  });
-
   // 특정 filePath의 댓글 데이터 가져오기
   const getComments = useCallback((filePath: string): CommentData => {
-    return commentsMap.get(filePath) || getDefaultData();
+    return commentsMap.get(filePath) || DEFAULT_COMMENT_DATA;
   }, [commentsMap]);
 
   // 댓글 로드 함수
   const loadComments = useCallback(async (filePath: string) => {
-    console.log(`[CommentsContext] 댓글 로드 시작: ${filePath}`);
-
     // 로딩 상태 설정
     setCommentsMap(prev => new Map(prev).set(filePath, {
-      ...(prev.get(filePath) || getDefaultData()),
+      ...(prev.get(filePath) || DEFAULT_COMMENT_DATA),
       isLoading: true,
       error: null,
     }));
@@ -64,7 +62,6 @@ export function CommentsProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      console.log(`[CommentsContext] 댓글 로드 성공:`, data.comments?.length || 0, '개');
 
       // 성공 시 데이터 업데이트
       setCommentsMap(prev => new Map(prev).set(filePath, {
@@ -78,8 +75,6 @@ export function CommentsProvider({ children }: { children: ReactNode }) {
         error: null,
       }));
     } catch (error) {
-      console.error(`[CommentsContext] 댓글 로드 실패:`, error);
-
       // 실패 시 에러 상태 설정
       setCommentsMap(prev => new Map(prev).set(filePath, {
         comments: [],

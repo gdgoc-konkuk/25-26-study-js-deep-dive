@@ -1,18 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo, memo } from 'react';
-import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import type { PRWithComments, Comment } from '../types/pr';
+import type { Comment, CommentWithPR } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
 import { useComments } from '../contexts/CommentsContext';
-
-interface CommentWithLine extends Comment {
-  prNumber: number;
-  prTitle: string;
-  prUrl: string;
-}
+import { useFilePath } from '../hooks/useFilePath';
+import { sortCommentsByLine } from '../lib/comment-utils';
 
 const CommentThreadSidebar = memo(function CommentThreadSidebar({ comment, prUrl, prNumber, prTitle }: {
   comment: Comment;
@@ -124,17 +119,12 @@ const CommentThreadSidebar = memo(function CommentThreadSidebar({ comment, prUrl
 });
 
 export default function CommentSidebar() {
-  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
 
-  // pathname을 filePath로 변환
-  const filePath = useMemo(() => {
-    const pathParts = pathname.replace(/^\//, '').split('/');
-    const convertedPath = pathParts.map(p => decodeURIComponent(p).replace(/-/g, ' ')).join('/');
-    return `src/content/${convertedPath}.mdx`;
-  }, [pathname]);
+  // 현재 파일 경로 (useFilePath 훅 사용)
+  const filePath = useFilePath();
 
   // useComments 훅 사용 - 중복 코드 대폭 제거!
   const { comments: rawComments, prInfo, isLoading, refetch } = useComments(filePath);
@@ -143,19 +133,15 @@ export default function CommentSidebar() {
   const comments = useMemo(() => {
     if (!prInfo || !rawComments) return [];
 
-    const commentsWithPR: CommentWithLine[] = rawComments.map(comment => ({
+    const commentsWithPR: CommentWithPR[] = rawComments.map(comment => ({
       ...comment,
       prNumber: prInfo.number,
       prTitle: prInfo.title,
       prUrl: prInfo.url,
     }));
 
-    // 라인 번호 순으로 정렬
-    return commentsWithPR.sort((a, b) => {
-      if (!a.lineNumber) return 1;
-      if (!b.lineNumber) return -1;
-      return a.lineNumber - b.lineNumber;
-    });
+    // 라인 번호 순으로 정렬 (sortCommentsByLine 유틸리티 사용)
+    return sortCommentsByLine(commentsWithPR);
   }, [rawComments, prInfo]);
 
   useEffect(() => {
