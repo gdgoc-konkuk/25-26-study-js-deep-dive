@@ -7,7 +7,7 @@ import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
 import { useComments } from '../contexts/CommentsContext';
 import { useFilePath } from '../hooks/useFilePath';
-import { sortCommentsByLine } from '../lib/comment-utils';
+import { addPRInfoToComments } from '../lib/comment-utils';
 
 const CommentThreadSidebar = memo(function CommentThreadSidebar({ comment, prUrl, prNumber, prTitle }: {
   comment: Comment;
@@ -127,22 +127,13 @@ export default function CommentSidebar() {
   const filePath = useFilePath();
 
   // useComments 훅 사용 - 중복 코드 대폭 제거!
-  const { comments: rawComments, prInfo, isLoading, refetch } = useComments(filePath);
+  const { comments: rawComments, prInfo, isLoading, refetch, deferredRefetch } = useComments(filePath);
 
-  // 댓글에 PR 정보 추가 및 라인 번호 정렬
-  const comments = useMemo(() => {
-    if (!prInfo || !rawComments) return [];
-
-    const commentsWithPR: CommentWithPR[] = rawComments.map(comment => ({
-      ...comment,
-      prNumber: prInfo.number,
-      prTitle: prInfo.title,
-      prUrl: prInfo.url,
-    }));
-
-    // 라인 번호 순으로 정렬 (sortCommentsByLine 유틸리티 사용)
-    return sortCommentsByLine(commentsWithPR);
-  }, [rawComments, prInfo]);
+  // 댓글에 PR 정보 추가 및 라인 번호 정렬 (유틸리티 함수 사용)
+  const comments = useMemo(() =>
+    addPRInfoToComments(rawComments, prInfo, { sort: true }),
+    [rawComments, prInfo]
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -150,10 +141,8 @@ export default function CommentSidebar() {
 
   const handleCommentSuccess = () => {
     setShowCommentForm(false);
-    // 댓글 작성 후 즉시 새로고침
-    setTimeout(() => {
-      refetch();
-    }, 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
+    // 댓글 작성 후 지연 새로고침 (deferredRefetch 사용)
+    deferredRefetch();
   };
 
   // 임시로 항상 표시 (디버깅용)

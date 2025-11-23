@@ -5,6 +5,7 @@ import type { CommentWithPR } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { useComments } from '../contexts/CommentsContext';
 import { useFilePath } from '../hooks/useFilePath';
+import { addPRInfoToComments, groupCommentsByLine } from '../lib/comment-utils';
 
 interface CodeBlockWithCommentsProps {
   children: React.ReactNode;
@@ -25,20 +26,14 @@ export default function CodeBlockWithComments({
   // useComments 훅으로 댓글 데이터 가져오기 (동적 API 사용)
   const { comments: rawComments, prInfo } = useComments(filePath);
 
-  // 댓글에 PR 정보 추가 (CommentWithPR 타입으로 변환)
-  const comments = useMemo<CommentWithPR[]>(() => {
-    if (!prInfo || !rawComments) return [];
-
-    // 인라인 리뷰 댓글만 필터링 (lineNumber가 있는 것만)
-    return rawComments
-      .filter(comment => comment.type === 'review-comment' && comment.lineNumber)
-      .map(comment => ({
-        ...comment,
-        prNumber: prInfo.number,
-        prTitle: prInfo.title,
-        prUrl: prInfo.url,
-      }));
-  }, [rawComments, prInfo]);
+  // 댓글에 PR 정보 추가 (유틸리티 함수 사용)
+  const comments = useMemo<CommentWithPR[]>(() =>
+    addPRInfoToComments(rawComments, prInfo, {
+      filterReviewComments: true,
+      requireLineNumber: true,
+    }),
+    [rawComments, prInfo]
+  );
 
   // 코드를 라인별로 분리
   // children이 React element일 수 있으므로 텍스트 추출
@@ -55,13 +50,8 @@ export default function CodeBlockWithComments({
 
   const lines = code.split('\n');
 
-  // 각 라인에 달린 댓글 그룹화
-  const commentsByLine = comments.reduce((acc, comment) => {
-    const lineNum = comment.lineNumber || 0;
-    if (!acc[lineNum]) acc[lineNum] = [];
-    acc[lineNum].push(comment);
-    return acc;
-  }, {} as Record<number, CommentWithPR[]>);
+  // 각 라인에 달린 댓글 그룹화 (유틸리티 함수 사용)
+  const commentsByLine = useMemo(() => groupCommentsByLine(comments), [comments]);
 
   const toggleLine = (lineNum: number) => {
     const newExpanded = new Set(expandedLines);

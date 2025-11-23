@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, memo } from 'react';
-import type { PRWithComments, Comment } from '../types/pr';
+import { useState, memo } from 'react';
+import type { Comment } from '../types/pr';
 import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
 import { useComments } from '../contexts/CommentsContext';
@@ -87,52 +87,21 @@ export default function PRComments({ filePath }: PRCommentsProps) {
   const [showCommentForm, setShowCommentForm] = useState(false);
 
   // useComments 훅 사용 - 중복 코드 제거!
-  const { comments, prInfo, isLoading, refetch } = useComments(filePath);
-
-  // PR 데이터 구성
-  const prComments: PRWithComments[] = useMemo(() => {
-    if (!prInfo || comments.length === 0) return [];
-
-    return [{
-      pr: {
-        number: prInfo.number,
-        title: prInfo.title,
-        state: 'merged' as const,
-        author: {
-          name: 'Unknown',
-          avatarUrl: '',
-          profileUrl: '',
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        mergedAt: new Date(),
-        url: prInfo.url,
-        labels: [],
-        commentCount: comments.length,
-        reviewCount: 0,
-        changedFiles: [],
-        additions: 0,
-        deletions: 0,
-      },
-      comments,
-    }];
-  }, [comments, prInfo]);
+  const { comments, prInfo, isLoading, deferredRefetch } = useComments(filePath);
 
   const handleCommentSuccess = () => {
     setShowCommentForm(false);
-    // 댓글 작성 후 즉시 새로고침
-    setTimeout(() => {
-      refetch();
-    }, 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
+    // 댓글 작성 후 지연 새로고침 (deferredRefetch 사용)
+    deferredRefetch();
   };
 
   return (
     <div className="mt-8 border-t pt-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">💬 PR 댓글</h2>
-        {prComments.length > 0 && (
+        {prInfo && (
           <button
-            onClick={refetch}
+            onClick={() => deferredRefetch()}
             disabled={isLoading}
             className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -141,15 +110,15 @@ export default function PRComments({ filePath }: PRCommentsProps) {
         )}
       </div>
 
-      {prComments.length > 0 && prComments.map(({ pr, comments }) => (
-        <div key={pr.number} className="mb-6 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+      {prInfo && comments.length > 0 && (
+        <div className="mb-6 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
           <a
-            href={pr.url}
+            href={prInfo.url}
             target="_blank"
             rel="noopener noreferrer"
             className="text-lg font-semibold hover:underline mb-3 block"
           >
-            #{pr.number} {pr.title}
+            #{prInfo.number} {prInfo.title}
           </a>
 
           <div className="space-y-3">
@@ -159,7 +128,7 @@ export default function PRComments({ filePath }: PRCommentsProps) {
             ))}
           </div>
         </div>
-      ))}
+      )}
 
       {/* 댓글 작성 섹션 */}
       <div className="mt-6">

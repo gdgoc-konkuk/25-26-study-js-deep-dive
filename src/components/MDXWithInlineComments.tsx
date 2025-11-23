@@ -6,6 +6,7 @@ import CommentReactions from './CommentReactions';
 import { CommentForm } from './CommentForm';
 import { useComments } from '../contexts/CommentsContext';
 import { useFilePath } from '../hooks/useFilePath';
+import { addPRInfoToComments, groupCommentsByLine } from '../lib/comment-utils';
 
 interface MDXWithInlineCommentsProps {
   children: React.ReactNode;
@@ -39,30 +40,24 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
   const filePath = useFilePath();
 
   // useComments 훅으로 댓글 데이터 가져오기 (동적 API 사용)
-  const { comments: rawComments, prInfo, refetch } = useComments(filePath);
+  const { comments: rawComments, prInfo, deferredRefetch } = useComments(filePath);
 
-  // 댓글에 PR 정보 추가 (CommentWithPR 타입으로 변환)
-  const comments = useMemo<CommentWithPR[]>(() => {
-    if (!prInfo || !rawComments) return [];
-
-    // 인라인 리뷰 댓글만 필터링 (lineNumber 또는 selectedText가 있는 것만)
-    return rawComments
-      .filter(comment => comment.type === 'review-comment' && (comment.lineNumber || comment.selectedText))
-      .map(comment => ({
-        ...comment,
-        prNumber: prInfo.number,
-        prTitle: prInfo.title,
-        prUrl: prInfo.url,
-      }));
-  }, [rawComments, prInfo]);
+  // 댓글에 PR 정보 추가 (유틸리티 함수 사용)
+  const comments = useMemo<CommentWithPR[]>(() =>
+    addPRInfoToComments(rawComments, prInfo, {
+      filterReviewComments: true,
+      requireLineOrText: true,
+    }),
+    [rawComments, prInfo]
+  );
 
   // 댓글 작성 성공 핸들러
   const handleCommentSuccess = () => {
     setSelectedLine(null);
     setDragStart(null);
     setIsDragging(false);
-    // 댓글 목록 새로고침 (CommentsContext 사용)
-    setTimeout(() => refetch(), 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
+    // 댓글 목록 새로고침 (deferredRefetch 사용)
+    deferredRefetch();
   };
 
   // 드래그 시작
@@ -146,8 +141,8 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
     setSelectedText('');
     setSelectionPosition(null);
     window.getSelection()?.removeAllRanges();
-    // 댓글 목록 새로고침 (CommentsContext 사용)
-    setTimeout(() => refetch(), 1000); // 1초 후 새로고침 (GitHub API 반영 대기)
+    // 댓글 목록 새로고침 (deferredRefetch 사용)
+    deferredRefetch();
   };
 
   // 텍스트 하이라이트 및 인라인 댓글 표시
@@ -294,12 +289,8 @@ export default function MDXWithInlineComments({ children, sourceCode }: MDXWithI
     };
   }, [comments, showReviews, activeCommentId]);
 
-  const commentsByLine = comments.reduce((acc, comment) => {
-    const lineNum = comment.lineNumber || 0;
-    if (!acc[lineNum]) acc[lineNum] = [];
-    acc[lineNum].push(comment);
-    return acc;
-  }, {} as Record<number, CommentWithPR[]>);
+  // 라인별로 댓글 그룹화 (유틸리티 함수 사용)
+  const commentsByLine = useMemo(() => groupCommentsByLine(comments), [comments]);
 
   // 소스 코드가 없으면 일반 렌더링만
   if (!sourceCode) {

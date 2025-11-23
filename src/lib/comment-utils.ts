@@ -2,6 +2,9 @@
  * 댓글 관련 유틸리티 함수
  */
 
+import type { Comment, CommentWithPR } from '../types/pr';
+import type { PRInfo } from '../contexts/CommentsContext';
+
 /**
  * GitHub Reactions 객체를 표준 형식으로 변환
  * @param reactions GitHub API에서 받은 reactions 객체
@@ -20,6 +23,66 @@ export function transformReactions(reactions: any) {
     rocket: reactions.rocket || 0,
     eyes: reactions.eyes || 0,
   };
+}
+
+/**
+ * Comment 배열을 CommentWithPR 배열로 변환하고 필터링/정렬
+ * @param comments 원본 댓글 배열
+ * @param prInfo PR 정보
+ * @param options 필터링 및 정렬 옵션
+ * @returns PR 정보가 포함된 댓글 배열
+ */
+export function addPRInfoToComments(
+  comments: Comment[],
+  prInfo: PRInfo | null,
+  options?: {
+    filterReviewComments?: boolean;
+    requireLineNumber?: boolean;
+    requireLineOrText?: boolean; // lineNumber 또는 selectedText 필요
+    sort?: boolean;
+  }
+): CommentWithPR[] {
+  if (!prInfo || !comments) return [];
+
+  let result = comments;
+
+  // 필터링
+  if (options?.filterReviewComments) {
+    result = result.filter(c => c.type === 'review-comment');
+  }
+  if (options?.requireLineNumber) {
+    result = result.filter(c => c.lineNumber);
+  }
+  if (options?.requireLineOrText) {
+    result = result.filter(c => c.lineNumber || c.selectedText);
+  }
+
+  // PR 정보 추가
+  const withPR = result.map(comment => ({
+    ...comment,
+    prNumber: prInfo.number,
+    prTitle: prInfo.title,
+    prUrl: prInfo.url,
+  }));
+
+  // 정렬
+  return options?.sort ? sortCommentsByLine(withPR) : withPR;
+}
+
+/**
+ * 댓글을 라인 번호별로 그룹화
+ * @param comments 댓글 배열
+ * @returns 라인 번호를 키로 하는 댓글 배열 객체
+ */
+export function groupCommentsByLine<T extends { lineNumber?: number }>(
+  comments: T[]
+): Record<number, T[]> {
+  return comments.reduce((acc, comment) => {
+    const lineNum = comment.lineNumber || 0;
+    if (!acc[lineNum]) acc[lineNum] = [];
+    acc[lineNum].push(comment);
+    return acc;
+  }, {} as Record<number, T[]>);
 }
 
 /**

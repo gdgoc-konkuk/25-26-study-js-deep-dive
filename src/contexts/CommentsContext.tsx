@@ -117,6 +117,16 @@ export function useComments(filePath: string) {
     await loadComments(filePath);
   }, [filePath, loadComments]);
 
+  // 지연 새로고침 함수 (댓글 작성 후 GitHub API 반영 대기용)
+  const deferredRefetch = useCallback(async (delay = 1000) => {
+    return new Promise<void>((resolve) => {
+      setTimeout(async () => {
+        await refetch();
+        resolve();
+      }, delay);
+    });
+  }, [refetch]);
+
   // 초기 로드 - useEffect로 이동
   useEffect(() => {
     // 데이터가 없고, 로딩 중이 아니고, 에러가 없으면 로드
@@ -131,6 +141,7 @@ export function useComments(filePath: string) {
     isLoading: data.isLoading,
     error: data.error,
     refetch,
+    deferredRefetch,
     clear: () => clearComments(filePath),
   };
 }
