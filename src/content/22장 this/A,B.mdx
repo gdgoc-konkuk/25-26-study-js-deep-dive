@@ -449,3 +449,72 @@ person.foo(function () {
 ![22-5](/images/ch22/22_5.png)
 
 <br />
+
+## 퀴즈
+
+## Q1 . 아래 코드를 실행했을 때 콘솔 출력은 무엇일까요?
+
+```jsx
+'use strict';
+
+const obj = {
+  x: 10,
+  foo() {
+    console.log(this.x);
+  },
+};
+
+const f = obj.foo;
+f();
+```
+
+A. 10<br />
+B. TypeError<br />
+C. undefined<br />
+D. window의 x<br />
+
+<details>
+<summary>정답</summary>
+**정답 : B**<br />
+obj.foo를 변수에 담아 f()로 호출하면 호출 주체가 사라져 일반 함수 호출이 되고,<br />strict mode에서는 this === undefined라 this.x에서 TypeError가 난다.
+
+</details>
+
+## Q2 . 아래 코드의 출력 결과를 순서대로 고르시오.
+
+```jsx
+'use strict';
+
+const person = {
+  name: 'Lee',
+  getName() {
+    return this.name;
+  },
+};
+
+const anotherPerson = { name: 'Kim' };
+
+anotherPerson.getName = person.getName;
+
+console.log(person.getName()); // (1)
+console.log(anotherPerson.getName()); // (2)
+
+const g = person.getName;
+console.log(g()); // (3)
+```
+
+A. (1) Lee, (2) Kim, (3) Lee<br />
+B. (1) Lee, (2) Kim, (3) undefined<br />
+C. (1) Lee, (2) Lee, (3) undefined<br />
+D. (1) Kim, (2) Lee, (3) undefined <br />
+
+<details>
+<summary>정답</summary>
+**정답 : B**
+(1) person.getName() → 호출 객체는 person → this.name = 'Lee'
+
+(2) anotherPerson.getName() → 호출 객체는 anotherPerson → this.name = 'Kim'
+
+(3) g()는 일반 함수 호출 → strict mode에서 this === undefined → this.name = undefined
+
+</details>

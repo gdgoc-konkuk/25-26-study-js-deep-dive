@@ -657,3 +657,58 @@ function foo(...rest = []) {
 
 4.  매개변수 기본값은 함수 정의 시 선언한 매개변수 개수를 나타내는 함수 객체의 length 프로퍼티와 arguments 객체에 아무런 영향을 주지 않는다.
     <br />
+
+## 퀴즈 <br />
+
+## Q1 . <br />
+
+22장에서도 살펴봤듯이 콜백 함수 내부의 this 문제를 해결하기 위한 4가지 방식 중<br />
+화살표 함수 방식은 ES6 이후에 도입된 해결방식이라는 사실을 알 수 있습니다. <br />
+다음은 콜백 함수 내부의 this 문제가 발생하는 상황에서 화살표 함수로 해결한 코드입니다. <br />
+화살표 함수의 **lexical this**에 대한 것으로 옳은 것은 무엇일까요?
+
+```jsx
+'use strict';
+
+const obj = {
+  prefix: '-webkit-',
+  add(arr) {
+    return arr.map((item) => this.prefix + item);
+  },
+};
+
+obj.add(['transition']);
+```
+
+A. 화살표 함수는 호출 방식에 따라 this가 동적으로 바인딩되며, map이 호출하므로 this는 배열을 가리킨다.<br />
+B. 화살표 함수는 자체 this 바인딩을 가지지 않아서, 내부에서 this를 참조하면 상위 스코프(add 메서드)의 this를 그대로 사용한다.<br />
+C. 화살표 함수의 this는 언제나 전역 객체(window/globalThis)를 가리킨다.<br />
+D. 화살표 함수는 bind/call/apply를 사용하면 원하는 객체로 this를 바꿀 수 있다.<br />
+
+<details>
+  <summary>정답</summary>
+  **정답 : B**
+  <br />
+  따라서 obj.add(['transition'])의 결과는? → ['-webkit-transition']
+</details>
+
+## Q2 . Rest 파라미터에 대한 설명으로 옳은 것만 고르시오.
+
+A. Rest 파라미터는 항상 첫 번째 매개변수로만 올 수 있다.<br />
+B. Rest 파라미터는 여러 개 선언할 수 있다.<br />
+C. Rest 파라미터는 함수의 length에 포함되지 않는다.<br />
+D. Rest 파라미터는 기본값을 가질 수 있다.<br />
+E. Rest 파라미터는 전달된 인수들을 “배열”로 받는다.<br />
+
+<details>
+<summary>정답</summary>
+**정답 : C,E** <br />
+C. Rest 파라미터는 함수의 length에 포함되지 않는다. (O)<br />
+length는 Rest를 제외한 “일반 매개변수” 개수만 센다.<br />
+`function f(a, ...rest) {} → f.length === 1`<br />
+
+E. Rest 파라미터는 전달된 인수들을 배열로 받는다. (O)<br />
+Rest는 ...rest 형태로 전달된 나머지 인수들을 진짜 배열(Array) 로 모아준다.<br />
+`rest.map(...) 같은 배열 메서드를 바로 쓸 수 있음.`<br />
+
+</details>
