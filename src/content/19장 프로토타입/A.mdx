@@ -1352,3 +1352,223 @@ for .. in 문은 상속받은 프로퍼티만 열거하므로, 객체 자신의 
   address Seoul
   */
   ```
+
+## 퀴즈
+
+---
+
+## 문제 1. 다음 설명 중 **옳은 것만 모두 고르시오.**
+
+① 모든 객체는 내부 슬롯 `[[Prototype]]`을 가진다.  
+② `prototype` 프로퍼티는 모든 객체가 가진다.  
+③ `__proto__`는 객체 자신의 프로토타입을 가리킨다.  
+④ 프로토타입 체인의 종점은 항상 `Object.prototype`이다.  
+⑤ 프로퍼티 탐색은 객체 자신 → 프로토타입 → 상위 프로토타입 순으로 진행된다.
+
+<details>
+  <summary>정답 보기</summary>
+
+**정답: ①, ③, ⑤**
+
+- ② `prototype`은 **생성자 함수(constructable function)**만 소유합니다. (일반 객체는 없음)
+- ④ 종점은 `Object.prototype`이 아니라 **`null`** 입니다. (`Object.prototype.__proto__ === null`)
+  </details>
+
+---
+
+## 문제 2. 아래 중 항상 true인 것은?
+
+```js
+function Person() {}
+const me = new Person();
+```
+
+① me.**proto** === Person.prototype
+② Person.**proto** === Object.prototype
+③ Person.prototype.**proto** === Object.prototype
+④ me.prototype === Person.prototype
+
+<details>
+  <summary>정답 보기</summary>
+
+정답: ①, ③
+• ① 인스턴스의 [[Prototype]](접근은 **proto**)는 생성자 함수의 prototype을 가리킵니다.
+• ② Person은 함수 객체라서 Person.**proto** === Function.prototype 입니다.
+• ③ Person.prototype은 일반 객체이므로 그 상위는 보통 Object.prototype입니다.
+• ④ prototype은 **함수(생성자)**에 있는 프로퍼티라 인스턴스 me에는 없습니다.
+
+</details>
+
+---
+
+## 문제 3. (프로퍼티 탐색 순서) 다음 코드의 출력결과는?
+
+```js
+function Person() {}
+Person.prototype.age = 20;
+
+const me = new Person();
+me.age = 30;
+
+console.log(me.age);
+```
+
+① 20
+② 30
+③ undefined
+④ TypeError
+
+<details>
+  <summary>정답 보기</summary>
+
+정답: ② (30)
+• me.age = 30은 인스턴스 me에 **own 프로퍼티 age**를 만들고,
+• 접근할 때는 자기 자신(own) → 프로토타입 순서로 검색하므로 30이 먼저 나옵니다.
+
+</details>
+
+---
+
+## 문제 4. (프로토타입 체인 추적) 아래의 프로토타입 체인을 올바르게 표현한 것은?
+
+```js
+function Person() {}
+const me = new Person();
+```
+
+아래 중 프로토타입 체인을 올바르게 표현한 것은?
+
+① me → Object.prototype → null
+② me → Person → Object.prototype → null
+③ me → Person.prototype → Object.prototype → null
+④ me → Function.prototype → Object.prototype → null
+
+<details>
+  <summary>정답 보기</summary>
+
+정답: ③
+• 인스턴스 me의 상위는 Person.prototype
+• 그 다음은 Object.prototype
+• 마지막 종점은 null
+
+</details>
+
+---
+
+## 문제 5. 다음 코드의 출력결과는?
+
+```js
+function Person() {}
+const me = new Person();
+
+console.log(me instanceof Person);
+console.log(me instanceof Object);
+```
+
+① true / false
+② false / true
+③ true / true
+④ false / false
+
+<details>
+  <summary>정답 보기</summary>
+
+정답: ③ (true / true)
+• me instanceof Person
+→ Person.prototype이 me의 프로토타입 체인에 있으므로 true
+• me instanceof Object
+→ Object.prototype도 체인에 있으므로 true
+
+</details>
+
+---
+
+## 문제 6
+
+```js
+function Person() {}
+
+Person.prototype.eyes = 2;
+Person.prototype.nose = 1;
+
+const kim = new Person();
+const park = new Person();
+
+kim.eyes = 100;
+
+console.log(park.eyes); // (A)
+
+kim.__proto__.eyes = 200;
+
+console.log(kim.eyes); // (B)
+console.log(park.eyes); // (C)
+```
+
+1. (A), (B), (C)의 출력 결과를 순서대로 쓰시오
+2. 왜 kim.eyes = 100은 park에 영향을 주지 않았는데 kim.**proto**.eyes = 200은 park에 영향을 주었는지 설명하시오
+
+<details>
+  <summary>정답 보기</summary>
+
+1. 출력 결과
+   • (A) 2
+   • (B) 100
+   • (C) 200
+
+2. 이유
+   • kim.eyes = 100
+   → kim 인스턴스 자신에 eyes(own 프로퍼티)가 생성됩니다.
+   → park는 여전히 Person.prototype.eyes(=2)를 참조하므로 영향 없음.
+   • kim.**proto**.eyes = 200
+   → kim.**proto**는 곧 Person.prototype 입니다.
+   → 즉 프로토타입 객체의 eyes 자체를 200으로 바꾼 것이고,
+   → 프로토타입을 공유하는 다른 인스턴스(park)도 그 값을 읽게 되어 영향이 생깁니다.
+
+</details>
+
+---
+
+## 문제 7. 다음 코드의 출력결과는?
+
+```js
+const proto = { x: 10 };
+const obj = Object.create(proto);
+
+console.log(obj.x);
+console.log(Object.getPrototypeOf(obj) === proto);
+```
+
+① undefined / true
+② 10 / true
+③ 10 / false
+④ undefined / false
+
+<details>
+  <summary>정답 보기</summary>
+
+정답: ② (10 / true)
+• obj에는 x가 없지만 proto가 프로토타입이므로 obj.x에서 proto.x를 찾습니다.
+• Object.getPrototypeOf(obj)는 obj의 [[Prototype]]을 반환합니다.
+
+</details>
+
+---
+
+## 문제 8. OX를 고르시오.
+
+① 프로토타입은 객체다.
+② 프로토타입 체인은 상속 구조를 만든다.
+③ 인스턴스에 없는 프로퍼티는 프로토타입에서 검색된다.
+④ 프로토타입에 있는 값을 읽으면 복사된다.
+⑤ 프로토타입에 있는 값을 수정하면 모든 인스턴스에 영향을 줄 수 있다.
+
+<details>
+  <summary>정답 보기</summary>
+
+① O
+② O
+③ O
+④ X (값을 “복사”하는 게 아니라 **체인을 따라 “검색”**합니다)
+⑤ O (프로토타입의 공유 프로퍼티를 바꾸면 영향 가능)
+
+</details>
