@@ -956,7 +956,6 @@ console.log(Person.prototype === Object.getPrototypeOf(me)); // true
 ```
 
 이처럼 프로토타입 교체를 통해 객체 간의 상속 관계를 동적으로 변경하는 것은 꽤나 번거롭다. 따라서 프로토타입은 직접 교체하지 않는 것이 좋다. 상속 관계를 인위적으로 설정하려면 19.11절 "직접 상속"에서 살펴볼 직접 상속이 더 편리하고 안전하다. 또는 ES6에서 도입된 클래스를 사용하면 간편하고 직관적으로 상속 관계를 구현할 수 있다.
-제공해주신 이미지 6장에 포함된 텍스트를 순서에 맞춰 있는 그대로 타이핑해 드립니다. 가독성을 위해 마크다운 형식을 적용하였습니다.
 
 ---
 
@@ -1225,9 +1224,6 @@ obj.a = 1;
 console.log(Object.prototype.hasOwnProperty.call(obj, 'a')); // true
 ```
 
-제공해주신 이미지 2장에 포함된 텍스트를 있는 그대로 타이핑해 드립니다.
-
----
 
 **【 예제 19-54 】**
 
@@ -1388,7 +1384,7 @@ console.log(Object.getOwnPropertyDescriptor(Object.prototype, 'toString'));
 
 따라서 for ... in 문에 대해 좀 더 정확히 표현하면 아래와 같다.
 
-> **for ... in 문은 객체의 프로토타입 체인 상에 존재하는 모든 프로토타입의 프로퍼티 중에서 프로퍼티 어트리뷰트 [[Enumerable]]의 값이 true인 프로퍼티를 순회하며 열거<sup>enumeration</sup>한다.**
+> **for ... in 문은 객체의 프로토타입 체인 상에 존재하는 모든 프로토타입의 프로퍼티 중에서 프로퍼티 어트리뷰트 [[Enumerable]]의 값이 true인 프로퍼티를 순회하며 열거(enumeration)한다.**
 
 **【 예제 19-67 】**
 
