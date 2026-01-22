@@ -698,6 +698,67 @@ me.hasOwnProperty('name');
 -> 즉, 스코프체인과 프로토토타입 체인은 서로 연관없이 별개로 동작하는 게 아닌,
 서로 협력하여 식별자(ft.스코프체인)과 프로퍼티(ft.프로토타입 체인)을 검색하는 데 사용된다.
 
+
+
+---
+
+####  퀴즈
+
+1. 다음 코드의 실행 결과로 올바른 것은?
+
+```javascript
+
+const obj = Object.create(null);
+obj.name = 'Deep Dive';
+
+console.log(obj.hasOwnProperty('name'));
+```
+--------
+1. true가 출력된다.
+2. false가 출력된다.
+3. undefined가 출력된다.
+4. TypeError: obj.hasOwnProperty is not a function이 발생한다.
+5. 아무것도 출력되지 않는다.
+--------
+2. 다음 코드의 결과값 (A)와 (B)를 순서대로 짝지은 것은?
+```javascript
+function Parent() {}
+Parent.prototype.x = 10;
+
+const child = new Parent();
+child.x = 20;
+
+console.log(child.x); // (A)
+delete child.x;
+console.log(child.x); // (B)
+```
+------
+1. (A): 20, (B): 10 
+
+2. (A): 20, (B): undefined
+
+3. (A): 10, (B): 10
+
+4. (A): 20, (B): 20
+
+5. (A): undefined, (B): 10
+
+<details>
+<summary><b> 정답 및 해설 확인하기 (클릭)</b></summary>
+
+#### [정답]
+
+1. **4번** (TypeError: obj.hasOwnProperty is not a function)
+
+Object.create(null)로 생성된 객체는 프로토타입 체인의 종점인 Object.prototype을 상속받지 않는다. 즉, 종점이 없는 객체이고, 따라서 hasOwnProperty 같은 기본 메서드조차 사용할 수 없어 에러가 발생함.
+
+2. **1번** (20,10)
+
+delete 연산자는 객체 자신의 프로퍼티만 삭제한다. child.x를 지우면 가려져 있던(shadowed) Parent.prototype.x가 다시 드러나게 되어 10이 출력된다.
+
+
+</details>
+
 ## 19.8 오버라이딩과 프로퍼티 섀도잉
 
 프로토타입이 소유한 프로퍼티를 프로토타입 프로퍼티, 인스턴스가 소유한 프로퍼티를 인스턴스 프로퍼티라고 부른다.
