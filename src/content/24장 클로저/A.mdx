@@ -1,0 +1,481 @@
+# 24장 클로저
+
+클로저(closure)는 난해하기로 유명한 자바스크립트의 개념 중 하나다.
+하지만 사실 클로저는 자바스크립트 고유의 개념이 아니라 함수를 일급 객체로 취급하는 함수형 프로그래밍 언어에서 사용되는 중요한 특성이다.
+
+MDN에서는 클로저에 대해 다음과 같이 정의하고 있다.
+
+> **클로저(closure)**  
+> "A closure is the combination of a function and the lexical environment within which that function was declared."
+> **클로저는 함수와 그 함수가 선언된 렉시컬 환경의 조합이다.**
+
+정의가 무척 난해한데, 핵심 키워드는 "함수가 선언된 렉시컬 환경"이다.
+
+```javascript
+// 예제 24-01
+const x = 1;
+
+function outerFunc() {
+  const x = 10;
+
+  function innerFunc() {
+    console.log(x); // 10
+  }
+
+  innerFunc();
+}
+
+outerFunc();
+
+```
+
+`innerFunc`는 `outerFunc` 내부에서 선언된 중첩 함수다. 따라서 `innerFunc`의 상위 스코프는 `outerFunc`의 스코프다.
+만약 `innerFunc`가 `outerFunc` 내부에서 정의된 게 아니라면 `outerFunc` 내부에서 호출하더라도 `x`에 접근할 수 없다.
+
+```javascript
+// 예제 24-02
+const x = 1;
+
+function outerFunc() {
+  const x = 10;
+  innerFunc();
+}
+
+function innerFunc() {
+  console.log(x); // 1
+}
+
+outerFunc();
+
+```
+
+이 현상은 자바스크립트가 **렉시컬 스코프**를 따르는 프로그래밍 언어이기 때문이다.
+
+## 24.1 렉시컬 스코프
+
+**자바스크립트 엔진은 함수를 어디서 호출했는지가 아니라 함수를 어디에 정의했는지에 따라 상위 스코프를 결정한다. 이를 렉시컬 스코프(정적 스코프)라 한다.**
+
+```javascript
+// 예제 24-03
+const x = 1;
+
+function foo() {
+  const x = 10;
+  bar();
+}
+
+function bar() {
+  console.log(x);
+}
+
+foo(); // 1
+bar(); // 1
+
+// 예제 24-02에서 본 바와 같이
+// bar() 함수가 정의된 위치가 foo() 함수 외부기 때문에 foo() 함수 내의 bar() 함수가 실행되어도 x는 1이 나온다!
+```
+
+함수의 상위 스코프는 **함수 정의가 평가되는 시점**에 함수가 정의된 환경(위치)에 의해 결정된다.
+
+## 24.2 함수 객체의 내부 슬롯 [[Environment]]
+
+함수가 정의된 환경(위치)과 호출되는 환경(위치)은 다를 수 있다.
+따라서 렉시컬 스코프가 가능하려면 함수는 자신이 호출되는 환경과 상관없이 자신이 정의된 환경, 즉 상위 스코프를 기억해야 한다.
+
+이를 위해 **함수는 자신의 내부 슬롯 `[[Environment]]`에 자신이 정의된 환경, 즉 상위 스코프의 참조를 저장한다.**
+
+![24-1](/images/ch24/ch24_b01.png)
+
+> **상위 스코프 결정 과정**
+> 1. **함수 정의 평가**: 전역 코드 평가 시점에 함수 선언문이 평가되어 함수 객체가 생성된다.
+> 2. **상위 스코프 저장**: 이때 생성된 함수 객체의 내부 슬롯 `[[Environment]]`에는 현재 실행 중인 실행 컨텍스트의 렉시컬 환경(전역 렉시컬 환경)의 참조가 저장된다(위 그림의 1).
+> 3. **함수 호출 및 실행**: 함수가 호출되어 함수 실행 컨텍스트가 생성되면, 함수 렉시컬 환경의 '외부 렉시컬 환경에 대한 참조'에는 함수 객체의 `[[Environment]]`에 저장된 참조값이 할당된다(위 그림의 2, 3).
+> 
+> 
+
+즉, 함수 객체의 내부 슬롯 `[[Environment]]`에 저장된 렉시컬 환경의 참조가 바로 상위 스코프다.
+
+## 24.3 클로저와 렉시컬 환경
+
+다음 예제를 통해 클로저의 동작 원리를 실행 컨텍스트의 관점에서 단계별로 살펴보자.
+
+```javascript
+// 예제 24-05
+const x = 1;
+
+// 1.
+function outer() {
+  const x = 10;
+  const inner = function () { console.log(x); }; // (2)
+  return inner;
+}
+
+// outer 함수를 호출하면 중첩 함수 inner를 반환한다.
+// 그리고 outer 함수의 실행 컨텍스트는 실행 컨텍스트 스택에서 팝되어 제거된다.
+const innerFunc = outer(); // (3)
+innerFunc(); // 10
+
+```
+
+### 1. 전역 코드 평가 및 실행
+
+전역 코드가 실행되면 전역 실행 컨텍스트가 생성되고 전역 렉시컬 환경이 생성된다.
+이때 `outer` 함수 객체는 내부 슬롯 `[[Environment]]`에 전역 렉시컬 환경을 상위 스코프로서 저장한다.
+
+### 2. outer 함수 호출과 렉시컬 환경 생성
+
+`outer` 함수가 호출되면(3), `outer` 함수의 렉시컬 환경이 생성된다.
+이때 `outer` 함수 내부의 중첩 함수 `inner`가 평가된다(2. 함수 표현식).
+
+`inner`는 자신의 내부 슬롯 `[[Environment]]`에 현재 실행 중인 실행 컨텍스트의 렉시컬 환경, 즉 **`outer` 함수의 렉시컬 환경을 상위 스코프로서 저장한다.**
+
+![24-6](/images/ch24/ch24_b05.png)
+
+### 3. outer 함수 실행 종료와 상태 유지
+
+`outer` 함수의 실행이 종료되면 `outer` 함수의 실행 컨텍스트는 실행 컨텍스트 스택에서 제거(pop)된다.
+이때 **`outer` 함수의 렉시컬 환경까지 소멸하는 것은 아니다.**
+
+1. `outer` 함수의 실행 컨텍스트는 제거되지만, `outer` 함수의 렉시컬 환경은 `inner` 함수의 `[[Environment]]` 내부 슬롯에 의해 참조되고 있다.
+2. 그리고 `inner` 함수는 전역 변수 `innerFunc`에 의해 참조되고 있다.
+3. **가비지 컬렉터는 누군가가 참조하고 있는 메모리 공간을 해제하지 않는다.**
+
+따라서 `outer` 함수의 렉시컬 환경은 소멸하지 않고 유지된다.
+
+![24-7](/images/ch24/ch24_b06.png)
+
+### 4. innerFunc 함수 호출
+
+전역 변수 `innerFunc`를 통해 `inner` 함수를 호출하면 `inner` 함수의 실행 컨텍스트가 생성된다.
+`inner` 함수의 렉시컬 환경의 "외부 렉시컬 환경에 대한 참조"에는 `inner` 함수 객체의 `[[Environment]]`에 저장된 참조값(죽지 않고 살아있는 `outer` 함수의 렉시컬 환경)이 할당된다.
+
+따라서 `inner` 함수 내부에서 `x`에 접근할 때 다음 순서로 탐색한다.
+
+1. `inner` 함수 렉시컬 환경에서 `x` 검색 (실패)
+2. 상위 스코프인 `outer` 함수 렉시컬 환경에서 `x` 검색 (**성공: 10**)
+
+![24-8](/images/ch24/ch24_b07.png)
+
+### 동작 원리 정리
+
+`outer` 함수의 실행 컨텍스트는 실행 컨텍스트 스택에서 제거되지만, **`outer` 함수의 렉시컬 환경까지 소멸하는 것은 아니다.**
+
+1. `outer` 함수가 반환한 `inner` 함수는 전역 변수 `innerFunc`에 의해 참조되고 있다.
+2. `inner` 함수 객체의 `[[Environment]]` 내부 슬롯은 `outer` 함수의 렉시컬 환경을 참조하고 있다.
+3. **가비지 컬렉터는 누군가가 참조하고 있는 메모리 공간을 해제하지 않는다.**
+4. 따라서 `outer` 함수의 렉시컬 환경은 소멸하지 않고 유지된다.
+
+![24-4](/images/ch24/ch24_b02.png)
+
+### 클로저의 조건
+
+이처럼 **외부 함수보다 중첩 함수가 더 오래 유지되는 경우 중첩 함수는 이미 생명 주기가 종료한 외부 함수의 변수를 참조할 수 있다. 이러한 중첩 함수를 클로저(closure)라고 부른다.**
+
+자바스크립트의 모든 함수는 상위 스코프를 기억하므로 이론적으로 모든 함수는 클로저다. 하지만 일반적으로는 다음 두 조건을 만족하는 경우에만 클로저라 부른다.
+
+**1. 상위 스코프의 식별자를 참조해야 한다.**  
+상위 스코프의 어떤 식별자도 참조하지 않는 경우, 모던 브라우저는 메모리 낭비를 막기 위해 상위 스코프를 기억하지 않는다. (참조하지 않는 식별자는 기억할 필요가 없으므로)
+
+**2. 외부 함수보다 중첩 함수의 생명 주기가 길어야 한다.**  
+외부 함수보다 중첩 함수가 일찍 소멸한다면, 생명 주기가 종료된 외부 함수의 변수를 참조할 수 있다는 클로저의 본질에 부합하지 않는다.
+
+> **정리**  
+> **클로저는 중첩 함수가 상위 스코프의 식별자를 참조하고 있고 중첩 함수가 외부 함수보다 더 오래 유지되는 경우에 한정하는 것이 일반적이다.**
+
+이때 클로저에 의해 참조되는 상위 스코프의 변수를 **자유 변수(free variable)**라고 부른다. 클로저(closure)란 "함수가 자유 변수에 대해 닫혀있다(closed)"라는 의미로, "자유 변수에 묶여있는 함수"라고 이해할 수 있다.
+
+## 24.4 클로저의 활용
+
+**클로저는 상태(state)를 안전하게 변경하고 유지하기 위해 사용한다.**  
+다시 말해, 상태가 의도치 않게 변경되지 않도록 상태를 안전하게 **은닉(information hiding)** 하고 특정 함수에게만 상태 변경을 허용하기 위해 사용한다.
+
+함수가 호출될 때마다 횟수를 누적하여 출력하는 카운터 예제를 통해 살펴보자.
+
+### 잘못된 예제 1: 전역 변수 사용
+
+```javascript
+// 예제 24-09
+let num = 0; // 카운트 상태 변수 (전역 변수)
+
+const increase = function () {
+  return ++num;
+};
+
+console.log(increase()); // 1
+console.log(increase()); // 2
+
+```
+
+위 코드는 잘 동작하지만 치명적인 단점이 있다. `num`이 전역 변수이기 때문에 `increase` 함수뿐만 아니라 **어디서든 누구나 `num`을 변경할 수 있다(암묵적 결합).** 만약 누군가 의도치 않게 `num` 값을 변경하면 카운터 기능은 망가진다.
+
+### 잘못된 예제 2: 지역 변수 사용
+
+안전하게 변경하기 위해 `num`을 `increase` 함수의 지역 변수로 넣어보자.
+
+```javascript
+// 예제 24-10
+const increase = function () {
+  let num = 0; // 카운트 상태 변수 (지역 변수)
+  return ++num;
+};
+
+console.log(increase()); // 1
+console.log(increase()); // 1
+
+```
+
+이제 `num`은 안전해졌지만, **함수가 호출될 때마다 `num`이 0으로 다시 초기화**되므로 상태가 유지되지 않는다.
+
+### 올바른 해결책: 클로저 사용
+
+상태를 안전하게 은닉하면서도(전역 변수 문제 해결), 함수 호출과 무관하게 상태를 유지하려면(지역 변수 문제 해결) 클로저를 사용해야 한다.
+
+```javascript
+// 예제 24-11
+// 카운트 상태 변경 함수
+const increase = (function () {
+  // 카운트 상태 변수
+  let num = 0;
+
+  // 클로저
+  return function () {
+    // 카운트 상태를 1만큼 증가시킨다.
+    return ++num;
+  };
+}());
+
+console.log(increase()); // 1
+console.log(increase()); // 2
+console.log(increase()); // 3
+
+```
+
+1. 위 코드가 실행되면 즉시 실행 함수가 호출되고, 즉시 실행 함수가 반환한 함수가 `increase` 변수에 할당된다.
+2. `increase` 변수에 할당된 함수는 자신이 정의된 위치인 즉시 실행 함수의 렉시컬 환경을 기억하는 **클로저**다.
+3. 즉시 실행 함수는 호출 직후 소멸되지만, 즉시 실행 함수의 렉시컬 환경은 클로저(`increase`)에 의해 참조되고 있으므로 소멸하지 않는다.
+4. 따라서 `num` 변수는 계속 유지되며, 외부에서 직접 접근할 수 없는 은닉된 변수(`private` 변수)가 된다.
+
+### 함수형 프로그래밍에서의 활용
+
+함수형 프로그래밍에서는 외부 상태 변경이나 가변 데이터를 피하고 불변성을 지향한다. 여기서도 클로저는 적극적으로 활용된다.
+
+```javascript
+// 예제 24-14
+// 함수를 인수로 전달받고 함수를 반환하는 고차 함수
+// 이 함수는 카운트 상태를 유지하기 위한 자유 변수 counter를 기억하는 클로저를 반환한다.
+function makeCounter(predicate) {
+  // 카운트 상태를 유지하기 위한 자유 변수
+  let counter = 0;
+
+  // 클로저를 반환
+  return function () {
+    // 인수로 전달받은 보조 함수에 상태 변경을 위임한다.
+    counter = predicate(counter);
+    return counter;
+  };
+}
+
+// 보조 함수
+function increase(n) {
+  return ++n;
+}
+
+// 보조 함수
+function decrease(n) {
+  return --n;
+}
+
+// 함수로 함수를 생성한다.
+// makeCounter 함수는 보조 함수를 인수로 전달받아 함수를 반환한다.
+const increaser = makeCounter(increase); // (1)
+console.log(increaser()); // 1
+console.log(increaser()); // 2
+
+// increaser 함수와는 별개의 독립된 렉시컬 환경을 갖기 때문에 카운터 상태가 연동하지 않는다.
+const decreaser = makeCounter(decrease); // (2)
+console.log(decreaser()); // -1
+console.log(decreaser()); // -2
+
+```
+
+**주의할 점:** `makeCounter` 함수를 호출할 때마다 새로운 실행 컨텍스트와 렉시컬 환경이 생성된다. 즉, `increaser`와 `decreaser`는 **각각 자신만의 독립된 렉시컬 환경(각각의 `counter` 변수)을 갖는다.**
+
+![24-9](/images/ch24/ch24_b03.png)
+
+만약 카운터의 상태를 공유하고 싶다면 렉시컬 환경을 공유하는 클로저를 만들어야 한다. (예제 24-15처럼 즉시 실행 함수 등으로 한 번만 호출되게 하여 렉시컬 환경을 하나만 생성하고 공유하게 만듦)
+
+## 24.5 캡슐화와 정보 은닉
+
+**캡슐화(encapsulation)** 는 객체의 상태를 나타내는 프로퍼티와 프로퍼티를 참조하고 조작할 수 있는 동작인 메서드를 하나로 묶는 것을 말한다.
+캡슐화는 객체의 특정 프로퍼티나 메서드를 감출 목적으로 사용하기도 하는데 이를 **정보 은닉(information hiding)** 이라 한다.
+
+자바스크립트는 `public`, `private`, `protected` 같은 접근 제한자를 제공하지 않는다. (ES2019 이전 기준)
+따라서 자바스크립트 객체의 모든 프로퍼티와 메서드는 기본적으로 `public`하다.
+
+### 1. 생성자 함수 내부에서 메서드 정의하기
+
+```javascript
+// 예제 24-16
+function Person(name, age) {
+  this.name = name; // public
+  let _age = age;   // private
+
+  // 인스턴스 메서드 (특권 메서드)
+  this.sayHi = function () {
+    console.log(`Hi! My name is ${this.name}. I am ${_age}.`);
+  };
+}
+
+const me = new Person('Lee', 20);
+me.sayHi(); // Hi! My name is Lee. I am 20.
+console.log(me.name); // Lee
+console.log(me._age); // undefined
+
+const you = new Person('Kim', 30);
+you.sayHi(); // Hi! My name is Kim. I am 30.
+console.log(you.name); // Kim
+console.log(you._age); // undefined
+
+```
+
+`name` 프로퍼티는 외부에서 자유롭게 접근할 수 있지만, `_age` 변수는 `Person` 생성자 함수의 지역 변수이므로 외부에서 참조하거나 변경할 수 없다. 즉, `private`하다.
+`sayHi` 메서드는 생성자 함수 내부에서 정의된 중첩 함수(클로저)이므로 지역 변수 `_age`에 접근할 수 있다.
+
+**문제점:** `sayHi` 메서드가 인스턴스를 생성할 때마다 중복 생성된다.
+메서드를 중복 생성하지 않으려면 프로토타입 메서드로 변경해야 한다.
+
+### 2. 프로토타입 메서드로 변경하기
+
+```javascript
+// 예제 24-17
+function Person(name, age) {
+  this.name = name; // public
+  let _age = age;   // private
+}
+
+// 프로토타입 메서드
+Person.prototype.sayHi = function () {
+  // Person 생성자 함수의 지역 변수 _age를 참조할 수 없다!
+  console.log(`Hi! My name is ${this.name}. I am ${_age}.`);
+};
+
+```
+
+이 경우 `Person.prototype.sayHi` 메서드는 `Person` 생성자 함수의 지역 변수 `_age`를 참조할 수 없는 문제가 발생한다.
+
+### 3. 즉시 실행 함수(IIFE)와 클로저를 이용한 해결
+
+생성자 함수와 프로토타입 메서드를 하나의 즉시 실행 함수로 묶어서 `_age` 변수를 공유하는 렉시컬 환경을 만들어보자.
+
+```javascript
+// 예제 24-18
+const Person = (function () {
+  let _age = 0; // private
+
+  // 생성자 함수
+  function Person(name, age) {
+    this.name = name; // public
+    _age = age;
+  }
+
+  // 프로토타입 메서드
+  Person.prototype.sayHi = function () {
+    console.log(`Hi! My name is ${this.name}. I am ${_age}.`);
+  };
+
+  // 생성자 함수를 반환
+  return Person;
+}());
+
+const me = new Person('Lee', 20);
+me.sayHi(); // Hi! My name is Lee. I am 20.
+
+const you = new Person('Kim', 30);
+you.sayHi(); // Hi! My name is Kim. I am 30.
+
+// _age 변수 값이 변경된다!
+me.sayHi(); // Hi! My name is Lee. I am 30.
+
+```
+
+즉시 실행 함수가 반환하는 `Person` 생성자 함수와 `Person` 생성자 함수의 인스턴스가 상속받아 호출할 `Person.prototype.sayHi` 메서드는 즉시 실행 함수의 종료 이후에도 `_age` 변수를 참조할 수 있는 클로저다.
+
+하지만 이 방식에도 심각한 문제가 있다.
+
+**치명적 단점:**
+즉시 실행 함수가 한 번만 실행되므로 `Person` 생성자 함수와 `Person.prototype.sayHi` 메서드는 **단 하나의 동일한 상위 스코프(즉시 실행 함수의 렉시컬 환경)를 공유한다.**
+따라서 `_age` 변수의 상태가 모든 인스턴스에 공유되어 버린다. 위 예제에서 `you`를 생성하면서 `_age`가 30으로 변경되면, `me`의 `_age`도 30으로 바뀌어 버린다.
+
+### 결론
+
+자바스크립트(ES6 이전)는 정보 은닉을 완전하게 지원하지 않는다.
+인스턴스 메서드를 사용하면 메모리 낭비가 발생하고, 프로토타입 메서드와 클로저를 사용하면 상태가 공유되는 문제가 발생한다.
+
+다행히 2021년 1월, 클래스에 `private` 필드(`#`)를 정의할 수 있는 새로운 표준 사양이 제안되었고 현재 최신 브라우저와 Node.js에 이미 구현되어 있다. (25장 클래스에서 다룸)
+
+## 24.6 자주 발생하는 실수
+
+`for` 문의 변수 선언문에서 `var` 키워드를 사용하면 블록 레벨 스코프가 아닌 함수 레벨 스코프를 갖기 때문에 발생하는 문제다.
+
+```javascript
+// 예제 24-20
+var funcs = [];
+
+for (var i = 0; i < 3; i++) {
+  funcs[i] = function () { return i; }; // ①
+}
+
+for (var j = 0; j < funcs.length; j++) {
+  console.log(funcs[j]()); // ②
+}
+
+```
+
+위 예제의 결과는 `0, 1, 2`가 될 것 같지만, 실제로는 `3, 3, 3`이 출력된다.
+`var` 키워드로 선언한 `i`는 전역 변수이기 때문에, `funcs` 배열의 함수들이 호출되는 시점에는 이미 `3`이 된 전역 변수 `i`를 참조하기 때문이다.
+
+### 해결 방법 1: let 키워드 사용
+
+ES6의 `let` 키워드를 사용하면 번거로운 클로저 처리 없이 깔끔하게 해결된다.
+
+```javascript
+// 예제 24-22
+const funcs = [];
+
+for (let i = 0; i < 3; i++) {
+  funcs[i] = function () { return i; };
+}
+
+for (let i = 0; i < funcs.length; i++) {
+  console.log(funcs[i]()); // 0 1 2
+}
+
+```
+
+`let` 키워드로 선언한 변수를 사용하면 `for` 문의 코드 블록이 반복 실행될 때마다 **새로운 렉시컬 환경**이 생성된다.
+
+![24-11](/images/ch24/ch24_b04.png)
+
+
+**동작 원리 상세:**
+
+1. **초기화 시점:** `for` 문이 평가되면 먼저 **새로운 렉시컬 환경(LOOP Lexical Environment)** 을 생성하고 초기화 변수(`i`)를 등록한다.
+2. **반복 실행 시점:** 코드 블록이 반복 실행될 때마다 **새로운 렉시컬 환경(PER-ITERATION Lexical Environment)** 을 생성하고, 당시의 식별자와 값을 등록한다. 즉, 반복할 당시의 상태를 마치 **스냅샷**을 찍는 것처럼 저장한다.
+3. **종료 시점:** 반복 실행이 모두 종료되면 실행 중인 실행 컨텍스트의 렉시컬 환경을 `for` 문 실행 이전으로 되돌린다.
+
+단, 반복문이 생성하는 새로운 렉시컬 환경은 반복문 내부에서 함수를 정의하여 그 함수가 렉시컬 환경을 참조하고 있을 때만 의미가 있다. 아무도 참조하지 않는다면 가비지 컬렉션의 대상이 된다.
+
+### 해결 방법 2: 고차 함수 사용
+
+함수형 프로그래밍 기법인 고차 함수를 사용하는 방법도 있다. 변수와 반복문의 사용을 억제하여 오류를 줄이고 가독성을 높일 수 있다.
+
+```javascript
+// 예제 24-23
+// 요소가 3개인 배열을 생성하고 배열의 인덱스를 반환하는 함수를 요소로 추가한다.
+// 배열의 요소로 추가된 함수들은 모두 클로저다.
+const funcs = Array.from(new Array(3), (_, i) => () => i); // (3) [f, f, f]
+
+// 배열의 요소로 추가된 함수들을 순차적으로 호출한다.
+funcs.forEach(f => console.log(f())); // 0 1 2
+
+```
