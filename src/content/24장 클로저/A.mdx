@@ -156,14 +156,10 @@ innerFunc(); // 10
 
 ![24-8](/images/ch24/ch24_b07.png)
 
-### 동작 원리 정리
-
-`outer` 함수의 실행 컨텍스트는 실행 컨텍스트 스택에서 제거되지만, **`outer` 함수의 렉시컬 환경까지 소멸하는 것은 아니다.**
-
-1. `outer` 함수가 반환한 `inner` 함수는 전역 변수 `innerFunc`에 의해 참조되고 있다.
-2. `inner` 함수 객체의 `[[Environment]]` 내부 슬롯은 `outer` 함수의 렉시컬 환경을 참조하고 있다.
-3. **가비지 컬렉터는 누군가가 참조하고 있는 메모리 공간을 해제하지 않는다.**
-4. 따라서 `outer` 함수의 렉시컬 환경은 소멸하지 않고 유지된다.
+> **동작 원리**  
+> `outer` 함수의 실행 컨텍스트는 스택에서 제거되지만, **`outer` 함수의 렉시컬 환경까지 소멸하는 것은 아니다.**
+> `inner` 함수의 `[[Environment]]` 내부 슬롯이 `outer` 함수의 렉시컬 환경을 참조하고 있고, `inner` 함수는 전역 변수 `innerFunc`에 의해 참조되고 있다.
+> **가비지 컬렉터는 누군가가 참조하고 있는 메모리 공간을 해제하지 않으므로, outer 함수의 렉시컬 환경은 유지된다.**
 
 ![24-4](/images/ch24/ch24_b02.png)
 
@@ -402,9 +398,10 @@ me.sayHi(); // Hi! My name is Lee. I am 30.
 
 하지만 이 방식에도 심각한 문제가 있다.
 
-**치명적 단점:**
-즉시 실행 함수가 한 번만 실행되므로 `Person` 생성자 함수와 `Person.prototype.sayHi` 메서드는 **단 하나의 동일한 상위 스코프(즉시 실행 함수의 렉시컬 환경)를 공유한다.**
-따라서 `_age` 변수의 상태가 모든 인스턴스에 공유되어 버린다. 위 예제에서 `you`를 생성하면서 `_age`가 30으로 변경되면, `me`의 `_age`도 30으로 바뀌어 버린다.
+**치명적 단점:**  
+`Person.prototype.sayHi` 메서드는 단 한 번 생성되는 클로저다. 따라서 여러 인스턴스가 생성되더라도 **하나의 동일한 상위 스코프(`_age`가 있는 렉시컬 환경)를 사용하게 된다.**
+
+**즉, 어떤 인스턴스에서 `_age`를 변경하더라도 모든 인스턴스에 적용되는(상태가 공유되는) 문제가 발생한다.**
 
 ### 결론
 
@@ -479,3 +476,207 @@ const funcs = Array.from(new Array(3), (_, i) => () => i); // (3) [f, f, f]
 funcs.forEach(f => console.log(f())); // 0 1 2
 
 ```
+
+
+## 연습 문제
+
+### 문제 1. 렉시컬 스코프의 이해
+다음 코드의 실행 결과는 무엇이며, 그 이유는 무엇인가?
+
+```javascript
+const x = 1;
+
+function foo() {
+  const x = 10;
+  bar();
+}
+
+function bar() {
+  console.log(x);
+}
+
+foo();
+bar();
+
+```
+
+<details>
+<summary><b>정답 및 해설 보기</b></summary>
+<div markdown="1">
+
+**정답:** `1`, `1`
+
+**해설:**
+자바스크립트는 **렉시컬 스코프(정적 스코프)**를 따릅니다. 함수의 상위 스코프는 함수가 **호출된 위치가 아니라 정의된 위치**에 의해 결정됩니다.
+`bar` 함수는 전역에서 정의되었으므로, `bar`의 상위 스코프는 전역 스코프입니다. 따라서 `foo` 내부에서 호출되더라도 `bar`는 자신이 기억하는 상위 스코프인 전역의 `x` (값 1)를 참조합니다.
+
+</div>
+</details>
+
+---
+
+### 문제 2. 클로저와 독립된 렉시컬 환경
+
+다음 코드의 실행 결과 (A), (B), (C)는 무엇인가?
+
+```javascript
+function makeCounter(predicate) {
+  let counter = 0;
+
+  return function () {
+    counter = predicate(counter);
+    return counter;
+  };
+}
+
+function increase(n) { return ++n; }
+function decrease(n) { return --n; }
+
+const increaser = makeCounter(increase);
+console.log(increaser()); // (A)
+console.log(increaser()); // (B)
+
+const decreaser = makeCounter(decrease);
+console.log(decreaser()); // (C)
+
+```
+
+<details>
+<summary><b>정답 및 해설 보기</b></summary>
+<div markdown="1">
+
+**정답:** (A) `1`, (B) `2`, (C) `-1`
+
+**해설:**
+`makeCounter` 함수가 호출될 때마다 **새로운 실행 컨텍스트와 렉시컬 환경**이 생성됩니다.
+따라서 `increaser`와 `decreaser`는 서로 다른 렉시컬 환경의 `counter` 변수를 참조하므로 상태가 공유되지 않고 독립적으로 관리됩니다.
+
+</div>
+</details>
+
+---
+
+### 문제 3. 클로저를 이용한 정보 은닉
+
+다음 코드는 즉시 실행 함수(IIFE)를 사용하여 카운터를 구현한 것이다. 실행 결과 (A), (B), (C)를 예측하시오.
+
+```javascript
+const counter = (function () {
+  let num = 0; // private 변수
+
+  return {
+    increase() {
+      return ++num;
+    },
+    decrease() {
+      return --num;
+    }
+  };
+}());
+
+console.log(counter.increase()); // (A)
+console.log(counter.increase()); // (B)
+console.log(counter.decrease()); // (C)
+
+```
+
+<details>
+<summary><b>정답 및 해설 보기</b></summary>
+<div markdown="1">
+
+**정답:** (A) `1`, (B) `2`, (C) `1`
+
+**해설:**
+즉시 실행 함수(IIFE)는 단 한 번 실행되어 객체를 반환합니다. 반환된 객체의 메서드(`increase`, `decrease`)는 **동일한 렉시컬 환경(IIFE의 렉시컬 환경)**을 상위 스코프로 공유합니다.
+따라서 `num` 변수는 하나이며, 두 메서드가 이 변수를 공유하여 상태를 변경합니다.
+
+</div>
+</details>
+
+---
+
+### 문제 4. 프로토타입 메서드와 클로저의 상태 공유 문제
+
+다음 코드는 생성자 함수와 프로토타입 메서드를 IIFE로 묶어 `_age`를 은닉하려 한 것이다. 마지막 줄의 `me.sayHi()` 실행 결과는 무엇이며, 그 이유는 무엇인가?
+
+```javascript
+const Person = (function () {
+  let _age = 0; // shared private variable
+
+  function Person(name, age) {
+    this.name = name;
+    _age = age;
+  }
+
+  Person.prototype.sayHi = function () {
+    console.log(`My name is ${this.name}. I am ${_age}.`);
+  };
+
+  return Person;
+}());
+
+const me = new Person('Lee', 20);
+me.sayHi(); // My name is Lee. I am 20.
+
+const you = new Person('Kim', 30);
+you.sayHi(); // My name is Kim. I am 30.
+
+me.sayHi(); // (질문: 실행 결과는?)
+
+```
+
+<details>
+<summary><b>정답 및 해설 보기</b></summary>
+<div markdown="1">
+
+**정답:** `My name is Lee. I am 30.`
+
+**해설:**
+`Person.prototype.sayHi` 메서드는 즉시 실행 함수가 실행될 때 단 한 번 생성되는 클로저입니다. 따라서 모든 인스턴스는 **하나의 `_age` 변수(IIFE의 렉시컬 환경)**를 공유하게 됩니다.
+`you` 인스턴스를 생성할 때 `_age`가 30으로 덮어쓰여졌기 때문에, 이후 `me.sayHi()`를 호출해도 변경된 값인 30이 출력됩니다. 이는 정보 은닉을 위해 클로저를 잘못 사용했을 때 발생하는 대표적인 부작용입니다.
+
+</div>
+</details>
+
+---
+
+### 문제 5. 반복문과 클로저의 실수
+
+다음 코드의 실행 결과는 무엇인가? 만약 의도치 않은 결과가 나온다면, ES6 문법을 사용하여 `0, 1, 2`가 출력되도록 코드를 수정하시오.
+
+```javascript
+var funcs = [];
+
+for (var i = 0; i < 3; i++) {
+  funcs[i] = function () { return i; };
+}
+
+for (var j = 0; j < funcs.length; j++) {
+  console.log(funcs[j]());
+}
+
+```
+
+<details>
+<summary><b>정답 및 해설 보기</b></summary>
+<div markdown="1">
+
+**정답:** `3`, `3`, `3`
+
+**해설:**
+`var i`는 함수 레벨 스코프를 가지므로 전역 변수로 취급됩니다. `for` 문이 끝났을 때 `i`의 값은 3이고, `funcs` 배열 안의 모든 함수는 동일한 전역 변수 `i`를 참조합니다.
+
+**수정 코드:**
+
+```javascript
+// var -> let으로 변경
+for (let i = 0; i < 3; i++) {
+  funcs[i] = function () { return i; };
+}
+
+```
+
+`let` 키워드는 블록 레벨 스코프를 가지며, 반복문이 실행될 때마다 **새로운 렉시컬 환경(스냅샷)**을 생성하므로 각 함수가 서로 다른 `i` 값(0, 1, 2)을 기억하게 됩니다.
+
+</div>
+</details>
