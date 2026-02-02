@@ -397,4 +397,78 @@ JS의 파싱과 실행이 **DOM 생성이 완료된 직후 진행**된다.
 
 ## 퀴즈
 
-스터디 당일 push 예정
+### 퀴즈 1 — HTML 파싱 중단 시점
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="a.js"></script>
+  </head>
+  <body>
+    <p>Hello</p>
+  </body>
+</html>
+```
+
+**Q. DOM 생성은 언제 중단되는가?**
+
+<details>
+  <summary>정답</summary>
+  `<script src="a.js">`를 만났을 때 HTML 파싱이 중단되고, JS 실행 완료 후 DOM 파싱이 재개된다.
+  <br />
+  async는 로드 완료 시점에 즉시 실행되기 때문이다.
+</details>
+
+### 퀴즈 2 — async vs defer 동작 판단
+
+```html
+<script async src="a.js"></script>
+<script async src="b.js"></script>
+```
+
+**Q. 실행 순서는 보장되는가? 왜?**
+
+<details>
+  <summary>정답</summary>
+  보장되지 않는다.
+  <br />
+  async는 로드 완료 시점에 즉시 실행되기 때문이다.
+</details>
+
+### 퀴즈 3 — 리플로우 발생 여부
+
+```jsx
+element.style.color = 'red';
+```
+
+**Q. 리플로우가 발생하는가?**
+
+<details>
+  <summary>정답</summary>
+  발생하지 않는다.
+  <br />
+  색상 변경은 레이아웃에 영향을 주지 않으므로 리페인트만 발생한다.
+</details>
+
+### 퀴즈 4 — DOM 접근 오류 원인
+
+```html
+<head>
+  <script>
+    document.getElementById('box').style.width = '100px';
+  </script>
+</head>
+<body>
+  <div id="box"></div>
+</body>
+```
+
+**Q. 에러 발생 원인은? 해결 방법은?**
+
+<details>
+  <summary>정답</summary>
+  DOM 생성 이전에 접근했기 때문.
+  <br />
+  해결: script를 body 하단으로 이동하거나 `defer` 사용.
+</details>
