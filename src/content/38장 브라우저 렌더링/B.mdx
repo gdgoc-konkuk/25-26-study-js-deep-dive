@@ -554,6 +554,67 @@ DOM 생성이 중단되는 문제를 근복적으로 해결하기 위해 추가�
 
 ## 퀴즈
 
+# 퀴즈를 풀어봅시다!
+
+---
+
+## Q1. 브라우저 렌더링 과정의 순서
+
+### 다음 중 브라우저가 화면을 그리기까지의 올바른 순서는?
+
+① HTML 파싱 → CSSOM 생성 → DOM 생성 → Render Tree 생성 → Paint  
+② HTML 파싱 → DOM 생성 → CSS 파싱 → CSSOM 생성 → Render Tree 생성  
+③ HTML 파싱 → DOM 생성 → CSSOM 생성 → Render Tree 생성 → Layout → Paint  
+④ HTML 파싱 → Render Tree 생성 → DOM 생성 → CSSOM 생성 → Paint
+
+<details>
+  <summary>정답 보기</summary>
+  <strong>정답: ③</strong>
+  <br />
+  브라우저는 HTML을 파싱해 DOM을 생성하고, CSS를 파싱해 CSSOM을 생성한 뒤 DOM과
+  CSSOM을 결합해 Render Tree를 만든다. 이후 Layout(레이아웃 계산)과
+  Paint(그리기)를 거쳐 화면을 렌더링한다.
+</details>
+
+---
+
+## Q2. JavaScript로 인한 HTML 파싱 중단
+
+### 다음 중 `<script>` 태그가 HTML 파싱을 중단시키는 가장 근본적인 이유는?
+
+① JavaScript 파일의 용량이 크기 때문이다.  
+② JavaScript는 CSSOM 생성을 항상 기다려야 하기 때문이다.  
+③ JavaScript는 DOM 구조를 변경할 수 있기 때문이다.  
+④ 브라우저는 script 태그를 항상 마지막에 실행하기 때문이다.
+
+<details>
+  <summary>정답 보기</summary>
+  <strong>정답: ③</strong>
+  <br />
+  JavaScript는 DOM을 수정할 수 있으므로, 브라우저는 HTML 파싱 도중 script 태그를
+  만나면 DOM 일관성을 보장하기 위해 파싱을 일시 중단하고 JavaScript를 실행한다.
+</details>
+
+---
+
+## Q3. CSS와 JavaScript가 렌더링에 미치는 영향
+
+### 다음 설명 중 옳은 것은?
+
+① CSS 파일은 HTML 파싱과 렌더링 모두를 항상 중단시킨다.  
+② JavaScript는 `defer` 속성을 사용해도 HTML 파싱을 중단시킨다.  
+③ CSSOM이 완성되지 않아도 Render Tree는 생성될 수 있다.  
+④ 기본 `<script>` 태그는 HTML 파싱을 중단시키지만, `defer`는 그렇지 않다.
+
+<details>
+  <summary>정답 보기</summary>
+  <strong>정답: ④</strong>
+  <br />
+  기본 `<script>` 태그는 HTML 파싱을 중단시키지만,  
+  `defer` 속성을 사용하면 HTML 파싱을 중단하지 않고  
+  DOM 생성이 완료된 후 JavaScript가 실행된다.
+</details>
+
 ## 관련 아티클
 
 **Naver D2 – 브라우저는 어떻게 동작하는가**
