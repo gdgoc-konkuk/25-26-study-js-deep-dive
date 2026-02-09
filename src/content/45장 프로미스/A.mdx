@@ -259,6 +259,65 @@ fetch(wrongUrl)
 
 </details>
 
+### 퀴즈 6: 실전 문제 - timeoutPromise 구현
+
+`fetchPromise`가 500ms 이내에 완료되지 않으면 에러를 발생시키는 `timeoutPromise` 함수를 구현하여, `Promise.race`를 통해 타임아웃 처리를 완성하시오. (타임아웃 발생 시 결과는 `null`이 되어야 함)
+
+**요구사항:**
+
+1.  `fetchPromise`가 **500ms 이내에 완료**되면 정상적으로 결과를 반환
+2.  **500ms를 초과**하면 `timeoutPromise`가 먼저 완료되어 **에러를 발생**시키고, `catch` 블록에서 **null을 반환**
+3.  `Promise.race`를 사용하여 두 Promise 중 먼저 완료되는 것을 처리
+
+```javascript
+const fetchPromise = () => {
+  return new Promise((resolve) => {
+    const delay = Math.random() * 500 + 300; // 300ms ~ 800ms
+    setTimeout(() => {
+      resolve({ data: 'API 응답 데이터', timestamp: Date.now(), delay: delay });
+    }, delay);
+  });
+};
+
+// TODO: 이 함수를 구현하세요
+const timeoutPromise = (ms) => {
+  // 여기에 코드를 작성하세요
+};
+
+const fetchWithTimeout = async () => {
+  try {
+    return await Promise.race([fetchPromise(), timeoutPromise(500)]);
+  } catch (error) {
+    return null;
+  }
+};
+
+fetchWithTimeout();
+```
+
+<details>
+  <summary>정답 및 해설</summary>
+
+**정답:**
+
+```javascript
+const timeoutPromise = (ms) => {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Request timeout after ${ms}ms`));
+    }, ms);
+  });
+};
+```
+
+**해설:**
+`setTimeout`은 프로미스를 반환하지 않으므로 `new Promise`로 감싸야 합니다.
+지정된 시간(`ms`)이 지난 후 `reject`를 호출하여 에러를 발생시키면, `Promise.race`가 이를 감지하여 가장 먼저 완료된 상태(실패)로 처리합니다. 이후 `try-catch` 블록에서 에러를 잡아 `null`을 반환하게 됩니다.
+
+[👉 관련 내용으로 이동: 45.6.3 Promise.race](#4563-promiserace)
+
+</details>
+
 ## 추천 자료
 
 - [MDN - Promise](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Promise)
