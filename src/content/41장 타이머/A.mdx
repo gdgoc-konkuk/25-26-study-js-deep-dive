@@ -1,0 +1,245 @@
+# 41장 타이머
+
+## 41.1 호출 스케줄링
+
+함수를 명시적으로 호출하면 함수가 즉시 실행된다. 만약 함수를 명시적으로 호출하지 않고 일정 시간이 경과된 이후에 호출되도록 함수 호출을 예약하려면 타이머 함수를 사용하는데, 이를 **호출 스케줄링(scheduling a call)**이라 한다.
+
+자바스크립트는 타이머 생성 함수 `setTimeout`, `setInterval`과 타이머 제거 함수 `clearTimeout`, `clearInterval`을 제공한다.
+이러한 타이머 함수는 ECMAScript 사양에 정의된 빌트인 함수가 아니라 **브라우저 환경과 Node.js 환경에서 모두 전역 객체의 메서드로서 제공**하는 호스트 객체다.
+
+자바스크립트 엔진은 단 하나의 실행 컨텍스트 스택을 갖기 때문에 두 가지 이상의 태스크를 동시에 실행할 수 없다. 즉, **싱글 스레드(single thread)** 방식으로 동작한다.
+따라서, `setTimeout`과 `setInterval`은 **비동기(asynchronous) 처리 방식**으로 동작한다.
+
+## 41.2 타이머 함수
+
+### 41.2.1 setTimeout / clearTimeout
+
+`setTimeout` 함수는 두 번째 인수로 전달받은 시간(ms)으로 단 한 번 동작하는 타이머를 생성한다.
+이후 타이머가 만료되면 첫 번째 인수로 전달받은 콜백 함수가 호출된다.
+
+```javascript
+// const timeoutId = setTimeout(func|code[, delay, param1, param2, ...]);
+
+// 1초(1000ms) 후 타이머가 만료되면 콜백 함수가 호출된다.
+setTimeout(() => console.log('Hi!'), 1000);
+
+// 매개변수
+// func: 타이머 만료 후 호출될 콜백 함수
+// delay: 타이머 만료 시간(ms). 생략 시 0
+// param1, param2...: 콜백 함수에 전달할 인수
+```
+
+`setTimeout` 함수는 생성된 타이머를 식별할 수 있는 고유한 타이머 id를 반환한다.
+이 id를 `clearTimeout` 함수의 인수로 전달하여 타이머를 취소할 수 있다.
+
+```javascript
+const timerId = setTimeout(() => console.log('Hi!'), 1000);
+
+// 타이머가 취소되면 콜백 함수가 실행되지 않는다.
+clearTimeout(timerId);
+```
+
+### 41.2.2 setInterval / clearInterval
+
+`setInterval` 함수는 두 번째 인수로 전달받은 시간(ms)으로 반복 동작하는 타이머를 생성한다.
+타이머가 만료될 때마다 첫 번째 인수로 전달받은 콜백 함수가 반복 호출된다. 이는 타이머가 취소될 때까지 계속된다.
+
+```javascript
+let count = 1;
+
+// 1초마다 콜백 함수가 호출된다.
+const timeoutId = setInterval(() => {
+  console.log(count); // 1 2 3 4 5
+  if (count++ === 5) clearInterval(timeoutId);
+}, 1000);
+```
+
+`setInterval` 역시 타이머 id를 반환하며, `clearInterval` 함수로 타이머를 취소할 수 있다.
+
+## 41.3 디바운스와 스로틀
+
+`scroll`, `resize`, `input`, `mousemove` 같은 이벤트는 짧은 시간 간격으로 연속해서 발생한다.
+이러한 이벤트에 바인딩된 이벤트 핸들러는 과도하게 호출되어 성능에 악영향을 줄 수 있다.
+
+디바운스와 스로틀은 **짧은 시간 간격으로 연속해서 발생하는 이벤트를 그룹화**하여 과도한 이벤트 핸들러의 호출을 방지하는 프로그래밍 기법이다.
+
+### 41.3.1 디바운스
+
+디바운스는 **짧은 시간 간격으로 발생하는 이벤트를 그룹화하여 마지막에 한 번만 이벤트 핸들러가 호출**되도록 한다.
+
+예를 들어, 검색어 입력 시 `input` 이벤트가 발생할 때마다 Ajax 요청을 보내면 서버에 부담이 된다.
+디바운스를 사용하면 사용자가 입력을 완료(일정 시간 동안 입력이 없을 때)했을 때 한 번만 요청을 보낼 수 있다.
+
+```javascript
+const debounce = (callback, delay) => {
+  let timerId;
+  /**
+   * debounce 함수는 timerId를 기억하는 클로저를 반환한다.
+   * @param {Event} event
+   */
+  return (event) => {
+    // delay 경과 전 이벤트를 발생시키면 이전 타이머를 취소하고 새로운 타이머를 재설정한다.
+    // 따라서 delay보다 짧은 간격으로 이벤트가 발생하면 callback은 호출되지 않는다.
+    if (timerId) clearTimeout(timerId);
+    timerId = setTimeout(callback, delay, event);
+  };
+};
+
+const $input = document.querySelector('input');
+$input.oninput = debounce((e) => {
+  console.log(e.target.value);
+}, 300);
+```
+
+**활용 사례:**
+
+- `resize` 이벤트 처리
+- `input` 요소에 입력된 값으로 Ajax 요청하는 자동완성 UI
+- 버튼 중복 클릭 방지 등
+
+### 41.3.2 스로틀
+
+스로틀은 **짧은 시간 간격으로 연속해서 발생하는 이벤트를 그룹화하여 일정 시간 단위로 이벤트 핸들러가 호출**되도록 호출 주기를 만든다.
+
+즉, **delay 시간 간격으로 콜백 함수가 실행**되는 것을 보장한다.
+
+```javascript
+const throttle = (callback, delay) => {
+  let timerId;
+  /**
+   * throttle 함수는 timerId를 기억하는 클로저를 반환한다.
+   * @param {Event} event
+   */
+  return (event) => {
+    // delay 경과 전 이벤트가 발생하면 아무 일도 하지 않고
+    // delay 경과 후 이벤트가 발생하면 새로운 타이머를 재설정한다.
+    // 따라서 delay 간격으로 callback이 호출된다.
+    if (timerId) return;
+    timerId = setTimeout(() => {
+      callback(event);
+      timerId = null;
+    }, delay);
+  };
+};
+
+const $container = document.querySelector('.container');
+$container.addEventListener(
+  'scroll',
+  throttle(() => {
+    console.log('scrolling...');
+  }, 100)
+);
+```
+
+**활용 사례:**
+
+- `scroll` 이벤트 처리 (무한 스크롤 등)
+- 게임 등에서 키 입력에 따른 반응 속도 제어
+
+### 디바운스 vs 스로틀 비교
+
+| 구분         | 설명                                                                 | 활용 예시                 |
+| :----------- | :------------------------------------------------------------------- | :------------------------ |
+| **디바운스** | 연이어 호출되는 함수들 중 마지막 함수(또는 제일 처음)만 호출         | 검색어 자동완성, 리사이징 |
+| **스로틀**   | 마지막 함수가 호출된 후 일정 시간이 지나기 전에는 다시 호출되지 않음 | 무한 스크롤, 슈팅 게임    |
+
+> 실무에서는 `Underscore`나 `Lodash` 같은 유틸리티 라이브러리의 `debounce`, `throttle` 함수를 사용하는 것이 일반적이다.
+
+## 과제: 퀴즈
+
+### 퀴즈 1
+
+`setTimeout` 함수의 콜백 함수 내에서 `this`는 무엇을 가리키는가? (일반 함수로 호출 시)
+
+<details>
+  <summary>정답 및 해설</summary>
+  
+  **정답:** 전역 객체 (`window` 또는 `global`)
+
+**해설:**
+`setTimeout`의 콜백 함수는 태스크 큐에 등록되었다가 호출 스택이 비었을 때 호출됩니다. 이때 콜백 함수는 일반 함수로서 호출되므로 `this`는 전역 객체를 가리키게 됩니다.
+만약 `class` 내부나 엄격 모드(`'use strict'`)에서는 동작이 다를 수 있으며, 화살표 함수를 사용하면 상위 스코프의 `this`를 계승하므로 이를 해결할 수 있습니다.
+
+[👉 관련 내용으로 이동: 41.2.1 setTimeout / clearTimeout](#4121-settimeout--cleartimeout)
+
+</details>
+
+### 퀴즈 2
+
+디바운스와 스로틀의 가장 큰 차이점은 무엇인가?
+
+<details>
+  <summary>정답 및 해설</summary>
+  
+  **정답:** 실행 주기의 차이 (그룹화 vs 주기적 실행)
+
+**해설:**
+
+- **디바운스(Debounce)**: 짧은 시간 간격으로 연속해서 발생하는 이벤트를 그룹화하여 **마지막에 한 번만** 이벤트 핸들러가 호출되도록 합니다. (예: 검색어 자동완성)
+- **스로틀(Throttle)**: 짧은 시간 간격으로 연속해서 발생하는 이벤트를 그룹화하여 **일정 시간 단위로** 이벤트 핸들러가 호출되도록 호출 주기를 만듭니다. (예: 스크롤 이벤트)
+
+[👉 관련 내용으로 이동: 41.3 디바운스와 스로틀](#413-디바운스와-스로틀)
+
+</details>
+
+### 퀴즈 3
+
+`setTimeout` 함수가 반환하는 값은 무엇이며, 이 값은 어떤 용도로 사용되는가?
+
+<details>
+  <summary>정답 및 해설</summary>
+  
+  **정답:** 고유한 타이머 id
+
+**해설:**
+`setTimeout` 함수는 생성된 타이머를 식별할 수 있는 고유한 타이머 id를 반환합니다. 브라우저 환경에서는 숫자, Node.js 환경에서는 객체가 반환됩니다.
+이 id를 `clearTimeout` 함수의 인수로 전달하면 예약된 타이머를 취소할 수 있습니다. 이미 실행된 타이머는 취소할 수 없습니다.
+
+[👉 관련 내용으로 이동: 41.2.1 setTimeout / clearTimeout](#4121-settimeout--cleartimeout)
+
+</details>
+
+### 퀴즈 4
+
+`setInterval` 함수로 생성된 타이머를 취소하지 않으면 어떤 문제가 발생할 수 있는가?
+
+<details>
+  <summary>정답 및 해설</summary>
+  
+  **정답:** 메모리 누수 및 불필요한 리소스 낭비
+
+**해설:**
+`setInterval` 함수는 취소하기 전까지 매 `delay` 시간마다 콜백 함수를 반복해서 호출합니다.
+SPA(Single Page Application) 환경에서 컴포넌트가 언마운트(화면에서 사라짐)되었음에도 타이머를 정리(`clearInterval`)하지 않으면,
+콜백 함수가 계속 실행되어 갹체나 클로저가 메모리에서 해제되지 않는 **메모리 누수**가 발생하고, 불필요한 연산으로 성능 저하를 유발할 수 있습니다.
+
+[👉 관련 내용으로 이동: 41.2.2 setInterval / clearInterval](#4122-setinterval--clearinterval)
+
+</details>
+
+### 퀴즈 5
+
+자바스크립트 엔진은 싱글 스레드로 동작한다. 그렇다면 `setTimeout`의 지연 시간(delay)이 0일 때, 콜백 함수는 즉시 실행되는가?
+
+<details>
+  <summary>정답 및 해설</summary>
+  
+  **정답:** 아니다. (비동기 처리)
+
+**해설:**
+지연 시간(`delay`)이 0이라도 `setTimeout`의 콜백 함수는 즉시 실행되지 않습니다.
+
+1.  `setTimeout` 함수 자체는 즉시 실행되어 타이머를 설정하고 종료됩니다.
+2.  콜백 함수는 태스크 큐(Task Queue)에 등록됩니다.
+3.  **콜 스택(Call Stack)에 실행 중인 실행 컨텍스트가 모두 제거되어 비어야만**, 이벤트 루프에 의해 태스크 큐의 콜백 함수가 콜 스택으로 이동하여 실행됩니다.
+    따라서 최소 4ms(브라우저별 상이) 이상의 지연이 발생할 수 있으며, 현재 실행 중인 코드의 실행 시간에 영향을 받습니다.
+
+[👉 관련 내용으로 이동: 41.1 호출 스케줄링](#411-호출-스케줄링)
+
+</details>
+
+## 추천 자료
+
+- [MDN - setTimeout](https://developer.mozilla.org/ko/docs/Web/API/setTimeout)
+- [Lodash - Debounce & Throttle](https://css-tricks.com/debouncing-throttling-explained-examples/)
+- [Modern JavaScript Deep Dive 41장](http://www.yes24.com/Product/Goods/92742567)
