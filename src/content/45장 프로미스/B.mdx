@@ -1,0 +1,403 @@
+# 45장 프로미스
+
+## 45-1. 비동기 처리를 위한 콜백 패턴의 한계
+
+자바스크립트에서 비동기 처리를 위해 콜백 함수를 사용하는 방식은 전통적이지만, 치명적인 두 가지 한계가 존재한다.
+
+### 1) 콜백 헬 (Callback Hell)
+
+비동기 함수는 처리 결과를 외부에 반환하거나 상위 스코프의 변수에 할당할 수 없다. 비동기 함수의 호출 함수는 비동기 함수의 종료 여부와 관계없이 종료된다.
+
+따라서 비동기 처리 결과에 대한 후속 처리는 비동기 함수 내부(콜백)에서만 수행해야 하며 이를 상위 스코프나 외부에서 처리하려고하면 의도한대로 동작하지않는다. 
+
+이 과정에서 비동기 호출이 반복되면 중첩이 심해지는 현상이다.
+
+```javascript
+get('/step1', a => {
+  get(`/step2/${a}`, b => {
+    get(`/step3/${b}`, c => {
+      console.log(c);
+    });
+  });
+});
+```
+
+**문제점:**
+- **가독성 저하:** 코드를 읽고 흐름을 파악하기 매우 어려워진다
+- **복잡도 증가:** 로직이 얽혀 유지보수가 불가능한 수준에 이른다
+
+### 2) 에러 처리의 한계 (Critical)
+
+가장 심각한 문제는 비동기 함수의 콜백 내부에서 발생한 에러는 `try...catch` 문으로 잡을 수 없다는 점이다.
+
+> try-catch-finally는 예외 처리를 구현하는 방법이다. 
+
+**원인:**
+- `setTimeout` 같은 비동기 함수가 호출되면 콜백 함수를 예약만 하고 즉시 실행 컨텍스트 스택에서 **팝(Pop)되어 제거**된다
+- **실행 컨텍스트 관점:** 이후 타이머가 만료되어 콜백 함수가 호출될 때는 이미 호출자인 비동기 함수가 사라진 상태이므로, 에러가 호출자 방향(Call Stack 하단)으로 전파되지 않는다
+
+```javascript
+try {
+  setTimeout(() => { 
+    throw new Error('Error!'); 
+  }, 1000);
+} catch (e) {
+  // 에러를 캐치하지 못함!
+  console.error('캐치한 에러:', e);
+}
+```
+
+## 45-2. 프로미스의 생성과 상태 (Promise States)
+
+프로미스는 위와 같은 문제를 해결하기 위해 ES6에서 도입된 **비동기 처리 상태를 관리하는 객체**다.
+
+### 1) 생성 방식
+
+`new Promise` 생성자 함수를 사용하며, 인자로 `resolve`와 `reject` 함수를 전달받는 콜백(executor)을 넘긴다.
+
+```javascript
+const promise = new Promise((resolve, reject) => {
+  if (/* 비동기 처리 성공 */) {
+    resolve('result');
+  } else {
+    reject('failure reason');
+  }
+});
+```
+
+### 2) 프로미스의 3가지 상태
+
+| 상태 | 의미 | 상태 변경 조건 |
+|------|------|----------------|
+| **pending** | 비동기 처리가 수행되기 전 초기 상태 | 프로미스 생성 직후 |
+| **fulfilled** | 비동기 처리가 성공한 상태 | `resolve` 함수 호출 시 |
+| **rejected** | 비동기 처리가 실패한 상태 | `reject` 함수 호출 시 |
+
+- 비동기 처리에 성공하면 `resolve` 함수를 호출해서 프로미스 객체를 fulfilled 상태로 변경한다.
+- 비동기 처리에 실패하면 `reject` 함수를 호출해서 프로미스 객체를 rejected 상태로 변경한다.
+
+![image.png](/images/ch45/img_1.png)
+
+**중요 개념:**
+- **Settled 상태:** `fulfilled` 혹은 `rejected`가 된 상태로, 다시는 `pending`으로 돌아갈 수 없으며 상태가 고정된다
+- **값의 보관:** 프로미스는 상태와 함께 **비동기 처리의 결과값**도 내부에 보관한다
+
+## 45-3. 프로미스의 후속 처리 메서드
+
+프로미스의 객체 상태가 변화되면 무언가 조치를 취해야한다. 성공하면 성공값을 프로그램에서 사용해야하며, 실패하면 에러처리(예외처리) 코드를 통해 조치해야한다. 
+
+프로미스의 비동기 처리가 끝난 후(Settled 상태) 결과값을 꺼내 쓰기 위해 사용한다. 모든 메서드는 **언제나 프로미스를 반환**한다(비동기로 동작한다).
+
+### 1) .then
+
+성공 시(fulfilled) 호출될 첫 번째 콜백과 실패 시(rejected) 호출될 두 번째 콜백을 인자로 받는다.
+
+- 대부분의 경우 첫 번째 인자만 사용하고 에러는 `.catch`에서 처리하는 것이 권장된다
+
+```javascript
+new Promise(resolve => resolve('fulfilled'))
+  .then(v => console.log(v), e => console.error(e));
+```
+
+### 2) .catch
+
+프로미스가 `rejected` 상태인 경우에만 호출된다. 내부적으로 `.then(undefined, onRejected)`를 호출하는 것과 같다.
+
+- 가독성이 더 좋고, `.then` 내부의 에러까지 잡아낼 수 있어 권장되는 방식이다
+
+```javascript
+new Promise((_, reject) => reject(new Error('rejected')))
+  .then(undefined, e => console.log(e));
+```
+
+### 3) .finally
+
+성공/실패와 상관없이 무조건 한 번 실행된다.
+
+- 데이터베이스 연결 종료나 로딩 인디케이터 제거 등 공통 로직 처리에 유용하다
+
+## 45-4. 에러 처리의 정석: .then vs .catch
+
+비동기 처리를 위한 콜백 패턴은 에러 처리가 곤란하다는 문제가 있다. 프로미스는 에러를 문제없이 처리할 수 있다. 
+
+```javascript
+const wrongUrl = 'https://jsonplaceholder.typicode.com/XXX/1';
+
+// 부적절한 URL이 지정되었기 때문에 에러가 발생한다.
+promiseGet(wrongUrl).then(
+  res => console.log(res),
+  err => console.error(err)
+); // Error: 404
+```
+
+```javascript
+const wrongUrl = 'https://jsonplaceholder.typicode.com/XXX/1';
+
+// 부적절한 URL이 지정되었기 때문에 에러가 발생한다.
+promiseGet(wrongUrl)
+  .then(res => console.log(res))
+  .catch(err => console.error(err)); // Error: 404
+```
+
+**비교:**
+- **.then의 두 번째 인자:** 첫 번째 콜백 함수 내부에서 발생한 에러를 잡아내지 못한다
+- **.catch 메서드:** 모든 `.then` 체인에서 발생한 에러뿐만 아니라 비동기 처리 자체의 에러까지 모두 잡아낼 수 있다
+
+**결론:** 에러 처리는 가급적 `.catch`에서 일괄적으로 수행하는 것이 효율적이다 (교재에서는 **권장**이라고 표현).
+
+## 45-5. 프로미스 체이닝 (Promise Chaining)
+
+후속 처리 메서드가 항상 새로운 프로미스를 반환하는 특성을 이용해 비동기 처리를 순차적으로 연결하는 기법이다. 이를 통해 콜백 헬을 평평한(flat) 구조로 펼칠 수 있다.
+
+```javascript
+promiseGet('/step1')
+  .then(res => promiseGet(`/step2/${res}`))
+  .then(res => promiseGet(`/step3/${res}`))
+  .catch(err => console.error(err));
+```
+
+위 예제에서 then - then - catch 순서로 후속처리 메서드를 호출했다. then, catch, finally 후속처리 메서드는 언제나 프로미스를 반환하므로 연속적으로 호출할 수 있다. 이를 프로미스 체이닝이라 한다 .
+
+## 45-6. 프로미스의 정적 메서드
+
+프로미스는 생성자 함수이므로 객체로서 여러 유용한 정적 메서드를 제공한다.
+
+### 1) Promise.all (병렬 처리)
+
+여러 개의 비동기 처리를 모두 병렬로 처리할 때 사용한다.
+
+- **특징:** 모든 프로미스가 `fulfilled`가 될 때까지 기다렸다가 결과를 배열로 반환한다 (병렬 처리 최적화)
+- **Fail-fast:** 하나라도 `rejected`가 되면 즉시 에러를 반환하며 종료된다
+
+```javascript
+const requestData1 = () =>
+  new Promise(resolve => setTimeout(() => resolve(1), 3000));
+const requestData2 = () =>
+  new Promise(resolve => setTimeout(() => resolve(2), 2000));
+const requestData3 = () =>
+  new Promise(resolve => setTimeout(() => resolve(3), 1000));
+
+// 세 개의 비동기 처리를 순차적으로 처리
+const res = [];
+requestData1()
+  .then(data => {
+    res.push(data);
+    return requestData2();
+  })
+  .then(data => {
+    res.push(data);
+    return requestData3();
+  })
+  .then(data => {
+    res.push(data);
+    console.log(res); // [1, 2, 3] ⇒ 약 6초 소요
+  })
+  .catch(console.error);
+```
+
+1. 순차적 처리 방식 (Sequential Processing)
+
+세 개의 비동기 처리를 하나씩 순서대로 실행하는 방식이다. 앞선 작업이 완전히 완료되어야만 다음 작업이 시작될 수 있다.
+> 예시: 3초, 2초, 1초가 소요되는 작업들을 순차적으로 처리할 경우, 전체 소요 시간은 총 6초 이상이 됩니다.
+
+2. 문제점 및 개선 방향
+
+비효율성: 각 비동기 처리가 서로 의존하지 않고 개별적으로 수행되는 경우(즉, 앞선 작업의 결과값이 다음 작업에 필요하지 않은 경우)에도 순차적으로 기다리는 것은 시간 낭비이다.
+> 해결책: 이런 상황에서는 작업들을 **병렬적**으로 처리하여 전체 소요 시간을 단축하는 것이 훨씬 효율적이다.
+
+```javascript
+const requestData1 = () => new Promise(resolve => setTimeout(() => resolve(1), 3000));
+const requestData2 = () => new Promise(resolve => setTimeout(() => resolve(2), 2000));
+const requestData3 = () => new Promise(resolve => setTimeout(() => resolve(3), 1000));
+
+// 세 개의 비동기 처리를 병렬로 처리
+Promise.all([requestData1(), requestData2(), requestData3()])
+  .then(console.log) // [ 1, 2, 3 ] ⇒ 약 3초 소요
+  .catch(console.error);
+```
+### 2) Promise.race (속도 경쟁 처리)
+
+여러 개의 비동기 처리 중 **가장 먼저 완료된 결과 하나만 필요할 때** 사용한다.
+
+* **특징:** 가장 먼저 `settled(fulfilled 또는 rejected)` 된 프로미스의 결과를 즉시 반환한다
+* **Fail-fast:** 가장 먼저 `rejected` 된 프로미스가 있으면 즉시 에러를 반환한다
+* 나머지 프로미스의 결과는 무시된다
+
+```javascript
+const requestData1 = () =>
+  new Promise(resolve => setTimeout(() => resolve(1), 3000));
+const requestData2 = () =>
+  new Promise(resolve => setTimeout(() => resolve(2), 2000));
+const requestData3 = () =>
+  new Promise(resolve => setTimeout(() => resolve(3), 1000));
+
+// 세 개의 비동기 처리 중 가장 먼저 끝나는 것만 사용
+Promise.race([requestData1(), requestData2(), requestData3()])
+  .then(console.log) // 3 ⇒ 약 1초 소요
+  .catch(console.error);
+```
+
+1. 동작 방식 (Fastest Wins)
+
+세 개의 비동기 처리가 동시에 실행되고,
+**가장 먼저 완료된 작업의 결과만 반환**된다.
+
+> 예시: 3초, 2초, 1초 작업이 동시에 실행되면, 1초짜리 작업이 먼저 완료되어 전체 소요 시간은 약 1초가 된다.
+
+2. 에러 발생 시 동작
+
+가장 먼저 `rejected` 되는 프로미스가 있다면 즉시 에러가 반환된다.
+
+```javascript
+const requestData1 = () =>
+  new Promise((_, reject) => setTimeout(() => reject(new Error("Error 1")), 3000));
+const requestData2 = () =>
+  new Promise((_, reject) => setTimeout(() => reject(new Error("Error 2")), 2000));
+const requestData3 = () =>
+  new Promise((_, reject) => setTimeout(() => reject(new Error("Error 3")), 1000));
+
+Promise.race([requestData1(), requestData2(), requestData3()])
+  .then(console.log)
+  .catch(console.error); // Error: Error 3 ⇒ 약 1초 소요
+```
+
+3. 활용 예시 (타임아웃 처리)
+
+`Promise.race`는 **요청 제한 시간**을 구현할 때 자주 사용된다.
+
+```javascript
+const fetchData = () =>
+  new Promise(resolve => setTimeout(() => resolve("데이터 응답"), 3000));
+
+const timeout = new Promise((_, reject) =>
+  setTimeout(() => reject(new Error("Timeout")), 2000)
+);
+
+Promise.race([fetchData(), timeout])
+  .then(console.log)
+  .catch(console.error); // Error: Timeout ⇒ 2초 후 종료
+```
+
+### 3) Promise.allSettled (전체 결과 확인 처리)
+
+여러 개의 비동기 처리를 **성공/실패와 상관없이 모두 완료될 때까지 기다린 후 결과를 확인할 때** 사용한다.
+
+* **특징:** 모든 프로미스가 `settled(fulfilled 또는 rejected)` 상태가 되면 결과를 배열로 반환한다
+* **Fail-safe:** 하나라도 `rejected` 되어도 전체가 실패하지 않는다
+* 각 결과는 `{ status, value | reason }` 형태의 객체로 반환된다
+
+```javascript
+const requestData1 = () =>
+  new Promise(resolve => setTimeout(() => resolve(1), 2000));
+
+const requestData2 = () =>
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Error!")), 1000)
+  );
+
+Promise.allSettled([requestData1(), requestData2()])
+  .then(console.log);
+
+/*
+[
+  { status: "fulfilled", value: 1 },
+  { status: "rejected", reason: Error("Error!") }
+]
+*/
+```
+
+1. 동작 방식 (All Results Returned)
+
+모든 비동기 작업이 끝날 때까지 기다린 뒤,
+각 작업의 성공/실패 여부를 **객체 형태로 배열에 담아 반환**한다.
+
+> 예시: 하나는 성공, 하나는 실패해도 전체가 중단되지 않는다.
+
+2. 반환 객체 구조
+
+* **fulfilled인 경우**
+
+  ```javascript
+  { status: "fulfilled", value: 결과값 }
+  ```
+
+* **rejected인 경우**
+
+  ```javascript
+  { status: "rejected", reason: 에러객체 }
+  ```
+
+3. Promise.all과의 차이
+
+| 메서드                  | 실패 발생 시             | 반환 형태    |
+| -------------------- | ------------------- | -------- |
+| `Promise.all`        | 하나라도 실패하면 즉시 reject | 성공 값 배열  |
+| `Promise.allSettled` | 실패해도 계속 진행          | 상태 객체 배열 |
+
+4. 사용 상황
+
+* 여러 요청을 보내고 **각 결과를 모두 확인해야 할 때**
+* 일부 실패가 허용되는 작업 (예: 여러 API 요청 로그 수집)
+* 성공/실패 통계를 내야 하는 경우
+
+## 45-7. 마이크로태스크 큐 (Microtask Queue)
+
+비동기 함수의 콜백 함수가 실행되는 순서를 정확히 이해하려면 태스크 큐와는 다른 **마이크로태스크 큐**의 존재를 알아야 합니다.
+
+### 💡 Quiz: 다음 코드의 출력 순서는 어떻게 될까요?
+
+```javascript
+setTimeout(() => console.log(1), 0);
+
+Promise.resolve()
+  .then(() => console.log(2))
+  .then(() => console.log(3));
+```
+<details>
+  <summary>정답 및 해설</summary>
+  출력 순서는 `2 → 3 → 1`입니다. `1 → 2 → 3`이 아닌 이유는 프로미스의 후속 처리 메서드 콜백이 **마이크로태스크 큐**에 저장되기 때문입니다.
+</details>
+
+### 1) 태스크 큐 vs 마이크로태스크 큐
+
+자바스크립트 엔진은 비동기 처리를 위해 두 종류의 큐를 운영하며, 각각 담기는 콜백 함수의 종류가 다릅니다.
+
+| 구분 | 마이크로태스크 큐 (Microtask Queue) | 태스크 큐 (Task/Event Queue) |
+| --- | --- | --- |
+| **대상** | **Promise**의 후속 처리 메서드 (`then`, `catch`, `finally`) | `setTimeout`, `setInterval`, 이벤트 핸들러 등 |
+| **우선순위** | **높음 (1순위)** | 낮음 (2순위) |
+
+### 2) 이벤트 루프의 동작 순서 (Priority)
+
+이벤트 루프는 단순히 큐에 있는 순서대로 실행하는 것이 아니라, **우선순위**에 따라 움직입니다.
+
+1. **콜 스택 확인:** 현재 실행 중인 컨텍스트가 있는지 확인한다.
+2. **마이크로태스크 큐 확인:** 콜 스택이 비면 먼저 마이크로태스크 큐에 대기 중인 함수를 가져와 실행한다.
+3. **반복:** 마이크로태스크 큐가 **완전히 비워질 때까지** 2번을 반복한다.
+4. **태스크 큐 확인:** 마이크로태스크 큐가 비어있을 때만 태스크 큐의 함수를 가져와 실행한다.
+
+> **핵심 요약:**
+> "마이크로태스크 큐는 일반 태스크 큐보다 우선순위가 높다. 따라서 `setTimeout`의 0초 설정보다 `Promise`의 후속 처리가 언제나 먼저 실행된다."
+
+## 45-8. fetch 함수와 프로미스
+
+`fetch`는 HTTP 요청 전송을 위한 최신 Web API로, `XMLHttpRequest`와 달리 프로미스를 지원하여 훨씬 깔끔한 코드를 작성할 수 있습니다.
+
+### ⚠️ fetch 사용 시 주의사항
+
+`fetch`가 반환하는 프로미스는 HTTP 상태 코드 에러(예: 404, 500)를 발생시켜도 **reject 되지 않고 fulfilled 상태**를 유지합니다.
+
+* 오직 네트워크 장애나 요청 중단 시에만 `reject` 된다.
+* 따라서 반드시 `response.ok`를 체크하여 수동으로 에러 처리를 해주어야 한다.
+
+```javascript
+fetch(url)
+  .then(response => {
+    // 404나 500 에러 시 response.ok는 false가 된다.
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
+  })
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+
+```
