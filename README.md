@@ -28,6 +28,7 @@ GDGoC Konkuk[25-26] 토론 기반 모던 자바스크립트 딥다이브 스터�
 |   11 |       A(2/23) / B(2/26)       |   43, 44   | Ajax, REST API                                                  |    24     | 최준서, 이율원 |                                                                            |
 |   12 |       A(3/3) / B(3/5)       |     49     | Webpack, Vite 번들러 분석                                       |     -     | 조성호, 이성종 |    https://frontend-fundamentals.com/bundling/webpack-tutorial/make-first-bundle.html  |
 |   13 |      A / B 통합 특강!    | - | npm, pnpm, yarn package manager |  -  |  김희용  |   |
+|   14 |      A / B 통합 특강!    | - | Ajax, fetch, axios, TanStack Query 알아보기 | - | ??? | |
 
 ### 진행방식
 
