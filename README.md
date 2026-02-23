@@ -26,7 +26,7 @@ GDGoC Konkuk[25-26] 토론 기반 모던 자바스크립트 딥다이브 스터�
 |    9 |   A(02/03) / B(02/05)   |     38     | 브라우저 렌더링                                                 |    14     | 정지원, 김석진 | 다음 아티클 시리즈 내용 추가 권장: https://d2.naver.com/helloworld/2922312 |
 |   10 |       A(2/9) / B(2/12)       | 42, 41, 45 | 비동기 프로그래밍, 타이머, 프로미스                             |    31     | 김지환, 박범식 |                                                                            |
 |   11 |       A(2/23) / B(2/26)       |   43, 44   | Ajax, REST API                                                  |    24     | 최준서, 이율원 |                                                                            |
-|   12 |       A(3/3) / B(3/5)       |     49     | Webpack, Vite 번들러 분석                                       |     -     | 조성호, 이성종 |                                                                            |
+|   12 |       A(3/3) / B(3/5)       |     49     | Webpack, Vite 번들러 분석                                       |     -     | 조성호, 이성종 |    https://frontend-fundamentals.com/bundling/webpack-tutorial/make-first-bundle.html  |
 
 ### 진행방식
 
