@@ -438,24 +438,24 @@ const data = await res.json();
 
 #### 주요 프로퍼티
 
-| 프로퍼티 | 설명 |
-| -------- | ---- |
-| `ok` | HTTP 응답 상태가 200-299이면 `true`, 아니면 `false` |
-| `status` | HTTP 응답 상태 코드 |
-| `statusText` | HTTP 응답 상태 메시지 |
-| `headers` | HTTP 응답 헤더. `Headers` 객체를 반환 |
-| `body` | HTTP 응답 본문. `ReadableStream`을 반환 |
-| `url` | HTTP 응답 URL |
+| 프로퍼티     | 설명                                                |
+| ------------ | --------------------------------------------------- |
+| `ok`         | HTTP 응답 상태가 200-299이면 `true`, 아니면 `false` |
+| `status`     | HTTP 응답 상태 코드                                 |
+| `statusText` | HTTP 응답 상태 메시지                               |
+| `headers`    | HTTP 응답 헤더. `Headers` 객체를 반환               |
+| `body`       | HTTP 응답 본문. `ReadableStream`을 반환             |
+| `url`        | HTTP 응답 URL                                       |
 
 #### 주요 메서드
 
-| 메서드 | 설명 |
-| -------- | ---- |
-| `json()` | HTTP 응답 본문을 JSON으로 파싱 |
-| `text()` | HTTP 응답 본문을 텍스트로 파싱 |
-| `blob()` | HTTP 응답 본문을 Blob으로 파싱 |
+| 메서드          | 설명                                |
+| --------------- | ----------------------------------- |
+| `json()`        | HTTP 응답 본문을 JSON으로 파싱      |
+| `text()`        | HTTP 응답 본문을 텍스트로 파싱      |
+| `blob()`        | HTTP 응답 본문을 Blob으로 파싱      |
 | `arrayBuffer()` | HTTP 응답 본문을 ArrayBuffer로 파싱 |
-| `formData()` | HTTP 응답 본문을 FormData로 파싱 |
+| `formData()`    | HTTP 응답 본문을 FormData로 파싱    |
 
 - `body`는 한 번만 읽을 수 있음 -> stream 이라서
 
@@ -465,10 +465,11 @@ const data = await res.json();
 
 ```js
 fetch('/api/data')
-  .then(res => res.json())
-  .then(data => console.log(data))
-  .catch(err => console.error(err));
+  .then((res) => res.json())
+  .then((data) => console.log(data))
+  .catch((err) => console.error(err));
 ```
+
 또는
 
 ```js
@@ -484,35 +485,36 @@ fetch('/api/login', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   },
   body: JSON.stringify({
     id: 'sterdsterd',
     password: 'password',
   }),
 })
-  .then(res => res.json())
-  .then(data => console.log(data))
-  .catch(err => console.error(err));
+  .then((res) => res.json())
+  .then((data) => console.log(data))
+  .catch((err) => console.error(err));
 ```
 
 #### 유의사항
 
 - `fetch`는 네트워크 에러만 `catch`로 잡음
 - 404, 500 등은 `catch`로 잡히지 않음
-그래서, 
+  그래서,
 
 ```js
 fetch('/api/data')
-  .then(res => {
+  .then((res) => {
     if (!res.ok) {
       throw new Error(res.status);
     }
     return res.json();
   })
-  .then(data => console.log(data))
-  .catch(err => console.error(err));
+  .then((data) => console.log(data))
+  .catch((err) => console.error(err));
 ```
+
 와 같이 명시적으로 처리가 필요함
 
 ### Request/Response 객체
@@ -524,7 +526,7 @@ const req = new Request('/api/data', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   },
   body: JSON.stringify({
     id: 'sterdsterd',
@@ -548,9 +550,9 @@ const signal = controller.signal;
 fetch('/api/data', {
   signal,
 })
-  .then(res => res.json())
-  .then(data => console.log(data))
-  .catch(err => console.error(err));
+  .then((res) => res.json())
+  .then((data) => console.log(data))
+  .catch((err) => console.error(err));
 
 controller.abort();
 ```
@@ -560,7 +562,187 @@ XHR의 `abort()`와 같이, Fetch API에서는 `AbortController`를 사용
 timeout은 `AbortController`로 구현 가능
 
 e.g.
+
 ```js
 const controller = new AbortController();
 setTimeout(() => controller.abort(), 5000);
 ```
+
+## 퀴즈
+
+<div style={{ border: '1px solid #ccc', padding: '1.25rem', borderRadius: '0.5rem', marginTop: '1rem' }}>
+<span style={{ fontSize: '1.5rem' }}>1</span>
+<br />
+다음 중 MPA와 Ajax의 차이에 대한 설명으로 옳은 것은?
+
+A. Ajax는 새로운 HTML 문서를 항상 다시 다운로드한다.
+
+B. MPA는 JS 실행 컨텍스트를 유지한다.
+
+C. Ajax는 페이지 전체가 아닌 필요한 데이터만 요청한다.
+
+D. Ajax는 동기 방식으로 통신한다.
+
+<details>
+<summary>
+정답 및 해설
+</summary>
+<div style={{ padding: '1rem' }}>
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 정답 </span>
+
+C
+
+---
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 해설 </span>
+
+MPA는 페이지 이동마다 새 HTML 문서를 받아오면서 DOM/JS 실행 컨텍스트가 새로 만들어짐.
+
+</div>
+</details>
+</div>
+
+---
+
+<div style={{ border: '1px solid #ccc', padding: '1.25rem', borderRadius: '0.5rem', marginTop: '1rem' }}>
+<span style={{ fontSize: '1.5rem' }}>2</span>
+<br />
+```js
+const obj = {
+  a: undefined,
+  b: NaN,
+  c: Infinity,
+  d: function () {},
+};
+
+console.log(JSON.stringify(obj));
+
+````
+
+A. `{"a":null,"b":null,"c":null,"d":null}`
+
+B. `{"b":null,"c":null}`
+
+C. `{"a":undefined,"b":NaN,"c":Infinity}`
+
+D. 에러 발생
+
+<details>
+<summary>
+정답 및 해설
+</summary>
+<div style={{ padding: '1rem' }}>
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 정답 </span>
+
+B. `{"b":null,"c":null}`
+
+---
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 해설 </span>
+
+- `undefined` -> 해당 key 제거됨
+- `function` -> 제거됨
+- `NaN`, `Infinity`, `-Infinity` -> `null`로 변환
+
+a, d는 없어지고, b, c만 남아서 `null`로 serialize
+
+</div>
+</details>
+</div>
+
+
+---
+
+<div style={{ border: '1px solid #ccc', padding: '1.25rem', borderRadius: '0.5rem', marginTop: '1rem' }}>
+<span style={{ fontSize: '1.5rem' }}>3</span>
+<br />
+다음 코드에서 404가 발생했을 때 실행 흐름은?
+```js
+fetch('/not-found')
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+````
+
+A. catch 블록이 실행된다
+
+B. then 블록이 실행된다
+
+C. 코드가 멈춘다
+
+D. SyntaxError 발생
+
+<details>
+<summary>
+정답 및 해설
+</summary>
+<div style={{ padding: '1rem' }}>
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 정답 </span>
+
+상황에 따라 A or B
+
+---
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 해설 </span>
+
+- 404 응답의 body가 JSON이면
+  - `res.json()` 성공
+  - `then`으로 넘어감
+- 404 응답의 body가 JSON이 아니거나 비어있으면
+  - `res.json()`이 `SyntaxError`를 `throw`
+  - `catch`로 넘어감
+
+통상적으로는
+
+```js
+fetch('/not-found')
+  .then((res) => {
+    if (!res.ok) throw new Error(res.status);
+    return res.json();
+  })
+  .catch(console.error);
+```
+
+와 같이 handling 하는 게 일반적
+
+</div>
+</details>
+</div>
+
+---
+
+<div style={{ border: '1px solid #ccc', padding: '1.25rem', borderRadius: '0.5rem', marginTop: '1rem' }}>
+<span style={{ fontSize: '1.5rem' }}>4</span>
+<br />
+다음 중 Fetch의 특징으로 옳지 않은 것은?
+
+A. Promise 기반이다
+
+B. Response 객체를 반환한다
+
+C. 업로드/다운로드 진행률 이벤트를 기본 제공한다
+
+D. AbortController로 요청 취소가 가능하다
+
+<details>
+<summary>
+정답 및 해설
+</summary>
+<div style={{ padding: '1rem' }}>
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 정답 </span>
+
+C. 업로드/다운로드 진행률 이벤트를 기본 제공한다
+
+---
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 해설 </span>
+
+XHR의 `onprogress`에 대응하는 이벹느가 없음
+
+</div>
+</details>
+</div>
