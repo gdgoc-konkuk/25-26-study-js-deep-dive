@@ -1,0 +1,566 @@
+# 43장 Ajax
+
+## 0. 전통적인 웹 페이지에서는...
+
+전통적인 웹 페이지(MPA<sup>Multi-Page Application</sup>)는 페이지 이동마다 새로운 HTML 문서를 서버로부터 다시 받아
+전체 DOM과 JS 실행 컨텍스트를 재구성하는 웹 애플리케이션 모델입니다.
+
+### 특징
+
+- 서버가 완성된 HTML을 반환
+  - Request 단위가 페이지 단위
+  - 변경할 필요가 없는 부분까지 모두 포함된 HTML을 전송받아 불필요한 데이터 통신 발생
+- 페이지 이동 시 브라우저 전체 재시작에 가까운 동작
+- 상태 유지 어려움
+  - JS 상태 초기화
+  - 로그인 상태는 쿠키 등으로 저장
+- 렌더링 비용 큼
+  - DOM 전체를 재구성 -> 변경할 필요 없는 부분까지 처음부터 다시 렌더링
+  - JS 초기화
+- 페이지 내비게이션 시 현재 실행 컨텍스트 종료 후 화면 전환 발생
+
+### 라이프사이클
+
+![traditional-webpage-lifecycle](/images/ch43/traditional-webpage-lifecycle.png)
+
+#### Initial Request & Response
+
+1. GET `/`
+2. 200 OK & `index.html` 수신
+3. HTML 파싱 시작
+4. `<link>`, `<script>` 태그를 만나면 추가 Request
+5. DOM, CSSOM 생성
+6. JS 실행
+7. Page 렌더링
+
+> HTML, CSS, JS가 한 번에 전달되는 것이 아니라
+> HTML을 먼저 받고, 파싱 중 CSS와 JS를 추가로 Request
+
+#### Page 전환(`/login` Request & Response)
+
+1. 현재 JS Context 종료
+2. 메모리 초기화
+3. 기존 DOM 삭제
+4. 새로운 HTML 수신
+5. 새로운 DOM 생성
+6. 새로운 JS 실행 및 전역 상태 리셋
+7. Page 렌더링
+
+> 페이지 이동 시 브라우저 전체 재시작에 가까운 동작
+
+## 1. Ajax가 뭔데요?
+
+- Ajax<sup>Asynchronous JavaScript and XML</sup>는
+  - 페이지 전체 reload 없이
+  - Async하게 데이터를 주고받아
+  - 부분적으로 DOM을 갱신하는 방식
+
+### 특징(vs MPA)
+
+- 변경할 부분을 갱신하는 데 필요한 데이터만 비동기적으로 요청
+  - 불필요한 데이터 통신 감소
+- 변경할 필요 없는 부분은 그대로 유지
+  - 불필요한 렌더링 감소
+  - 렌더링 비용 감소
+  - 화면이 깜빡이지 않음
+  - 로딩 핸들링 가능
+- JS 실행 컨텍스트 유지
+- 클라이언트와 서버 간 통신이 비동기적
+  - Response 전까지 Blocking 되지 않음
+
+### 라이프사이클
+
+![ajax-webpage-lifecycle](/images/ch43/ajax-webpage-lifecycle.png)
+
+#### Initial Request & Response
+
+는 MPA와 동일
+
+#### GET `/login` (Ajax)
+
+1. JS에서 Async하게 GET `/login` Request(`XHR`, `fetch` 등)
+2. 서버는 JSON 데이터만 반환
+3. JS는 JSON 데이터를 받아와서 DOM을 갱신
+4. 브라우저 repaint, reflow
+
+> 페이지 전체를 새로 받지 않고, 필요한 데이터만 받아와서 DOM을 갱신
+
+### 장점
+
+- JS 실행 컨텍스트 유지
+- 메모리 유지
+- 전역 상태 유지
+- 연결 재사용 가능
+
+### 단점
+
+- Ajax도 결국 HTTP 통신이니까...
+  - HTTP의 한계는 그대로
+  - 대신 서버가 HTML 말고 JSON을 반환
+  - 클라이언트가 렌더링 부담
+- 비동기 처리로 인한 복잡도 증가
+- DOM 조작이 많아지면 성능 저하
+  - Virtual DOM
+- URL이 변경되지 않음
+  - History API
+
+## 3. MPA vs Ajax 비교
+
+| 구분             | MPA                | Ajax                |
+| ---------------- | ------------------ | ------------------- |
+| 페이지 전환 시   | 전체 페이지 reload | 부분적으로 DOM 갱신 |
+| 데이터 통신      | HTML 전체          | 필요한 데이터만     |
+| 렌더링 비용      | 큼                 | 작음                |
+| JS 실행 컨텍스트 | 매번 초기화        | 유지                |
+| 통신 방식        | 동기적             | 비동기적            |
+
+## 4. JSON
+
+- [JSON<sup>JavaScript Object Notation</sup>](https://www.json.org/json-ko.html)은
+  - JS Object 리터럴 표기법을 기반으로 한 텍스트 데이터 포맷
+  - JS Object != JSON
+  - e.g. `'{"a": 1}'` -> JSON, `{a: 1}` -> JS Object
+
+```json
+{
+  "name": "Lee",
+  "age": 20,
+  "alive": true,
+  "hobby": ["traveling", "tennis"]
+}
+```
+
+### 문법 스펙
+
+- key와 value는 콜론(`:`)으로 구분
+- key는 반드시 큰따옴표(`"`)로 감싸야 함
+- value는 아래 타입만 허용
+  - `null`
+  - `boolean`: `true | false`
+  - `number`: 정수, 실수
+  - `string`: `"`
+  - `array`: `[]`
+  - `object`: `{}`
+- 쉼표(`,`)로 구분
+- 공백 무시
+
+### 안되는거
+
+- `undefined`
+- `function`
+- `Symbol`
+- `BigInt`
+- `Date`
+- `RegExp`
+- `NaN`
+- `Infinity`, `-Infinity`
+- `key`에 따옴표 안쓰는거
+- trailing comma
+- 따옴표 없는 key
+
+### `JSON.stringify()`
+
+- JS Object를 JSON 문자열로 변환
+
+#### 무슨 일이 일어나나요?
+
+- [ECMAScript `JSON.stringify()` Specification](https://tc39.es/ecma262/multipage/structured-data.html#sec-json.stringify)
+
+#### 유의사항
+
+- `undefined`는 사라짐
+  - `JSON.stringify({ a: undefined, b: 1 });` -> `'{"b":1}'`
+  - `JSON.stringify([undefined, 1]);` -> `'[null,1]'`
+- `function`은 사라짐
+  - `JSON.stringify({ f: () => 1, x: 2 });` -> `'{"x":2}'`
+- `NaN`, `Infinity`, `-Infinity`는 `null`로 변환
+  - `JSON.stringify({ n: NaN, i: Infinity });` -> `'{"n":null,"i":null}'`
+- 순환 참조는 `TypeError`
+  - `const a = {}; a.self = a; JSON.stringify(a);` -> `TypeError: Converting circular structure to JSON`
+
+#### Replacer
+
+`JSON.stringify(value, replacer, space)`에서, 두 번째 인자로 `replacer`를 전달할 수 있음
+
+- `replacer`가 `array`이면
+  - 배열에 포함된 키만 JSON 문자열에 포함 -> 필터링
+  - `JSON.stringify({ a: 1, b: 2, c: 3 }, ["a", "c"]);` -> `'{"a":1,"c":3}'`
+- `replacer`가 `function`이면
+  - `key`, `value`를 인자로 받는 콜백 함수
+  - 반환값으로 JSON 문자열에 포함될 값을 지정
+  - 반환값이 `undefined`이면 해당 프로퍼티는 생략
+  - ```js
+    const obj = {
+      name: 'Lee',
+      age: 20,
+      alive: true,
+      hobby: ['traveling', 'tennis'],
+    };
+    function filter(key, value) {
+      return typeof value === 'number' ? undefined : value;
+    }
+    JSON.stringify(obj, filter); // '{"name":"Lee","alive":true,"hobby":["traveling","tennis"]}'
+    ```
+
+### `JSON.parse()`
+
+- JSON 문자열을 JS Object로 변환
+
+#### 무슨 일이 일어나나요?
+
+- [ECMAScript `JSON.parse()` Specification](https://tc39.es/ecma262/multipage/structured-data.html#sec-json.parse)
+
+#### 유의사항
+
+- 실패 시 `SyntaxError`
+
+#### Reviver
+
+`JSON.parse(text, reviver)`에서, 두 번째 인자로 `reviver`를 전달할 수 있음
+
+```js
+const data = JSON.parse(
+  '{"createdAt":"2026-02-26T12:00:00.000Z"}',
+  (key, value) => {
+    if (key === 'createdAt') return new Date(value);
+    return value;
+  }
+);
+```
+
+와 같이 파싱 시점에 타입 복원 가능
+
+하지만, 모든 key에 대해 호출되므로 큰 payload의 경우 성능 저하
+
+## 5. `XMLHttpRequest`
+
+- JS가 직접 네트워크 통신을 전반을 처리하지는 않음
+  - 대략적으로 JS -> Browser Networking Stack -> OS -> TCP/IP -> Server
+- JS가 브라우저에 request object를 전달하고,
+- 브라우저가 DNS, TCP Handshake, TLS, HTTP 전송 등을 수행
+- response가 오면 이벤트 루프를 통해 JS 콜백 실행
+
+XHR은 네트워크 스택을 제어하는 인터페이스..?라고 볼 수 있음
+
+### XHR의 Property
+
+#### XHR Object의 Prototype Property
+
+| Prototype Property | 설명                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| `readyState`       | HTTP 요청의 현재 상태를 나타내는 정수                                                    |
+| `status`           | HTTP 요청에 대한 응답 상태(HTTP 상태 코드)를 나타내는 정수 (예: 200)                     |
+| `statusText`       | HTTP 요청에 대한 응답 메시지를 나타내는 문자열 (예: "OK")                                |
+| `responseType`     | HTTP 응답 타입 (예: document, json, text, blob, arraybuffer)                             |
+| `response`         | HTTP 요청에 대한 응답 몸체<sup>response body</sup>. `responseType`에 따라 타입이 다르다. |
+| `responseText`     | 서버가 전송한 HTTP 요청에 대한 응답 문자열                                               |
+
+#### XHR Object의 method
+
+| Method              | 설명                                     |
+| ------------------- | ---------------------------------------- |
+| `open`              | HTTP 요청 초기화                         |
+| `send`              | HTTP 요청 전송                           |
+| `abort`             | 이미 전송된 HTTP 요청 중단               |
+| `setRequestHeader`  | 특정 HTTP 요청 헤더의 값을 설정          |
+| `getResponseHeader` | 특정 HTTP 응답 헤더의 값을 문자열로 반환 |
+
+### XHR의 State Machine
+
+어쨌든 직접 네트워킹을 처리하는 것이 아니므로, 적절히 Abstraction이 되어있음.
+
+네트워크는 한 번에 처리되는 게 아니고, 단계별로 진행되고,
+XHR에서는 State Machine을 통해 네트워크 상태를 Abstraction이 되어있고,
+우리는 그 state를 기반으로 네트워크 통신을 진행하면 됨.
+
+| `readyState` 값 | 의미             | 상태                                  |
+| --------------- | ---------------- | ------------------------------------- |
+| 0               | UNSENT           | `open()` 호출 전                      |
+| 1               | OPENED           | `open()` 호출 후                      |
+| 2               | HEADERS_RECEIVED | `send()` 호출 후                      |
+| 3               | LOADING          | 서버 응답 중(응답 데이터 미완성 상태) |
+| 4               | DONE             | 서버 응답 완료                        |
+
+### XHR의 Event
+
+| Event Handler Property | 설명                                                         |
+| ---------------------- | ------------------------------------------------------------ |
+| `onreadystatechange`   | `readyState` 프로퍼티 값이 변경된 경우                       |
+| `onloadstart`          | HTTP 요청에 대한 응답을 받기 시작한 경우                     |
+| `onprogress`           | HTTP 요청에 대한 응답을 받는 도중 주기적으로 발생            |
+| `onabort`              | `abort` 메서드에 의해 HTTP 요청이 중단된 경우                |
+| `onerror`              | HTTP 요청에 에러가 발생한 경우                               |
+| `onload`               | HTTP 요청이 성공적으로 완료한 경우                           |
+| `ontimeout`            | HTTP 요청 시간이 초과한 경우                                 |
+| `onloadend`            | HTTP 요청이 완료된 경우. HTTP 요청이 성공 또는 실패하면 발생 |
+
+`onprogress`는 `fetch`에 없어서 진행률 계산할 때 XHR로 구현 가능
+
+### 동기 처리
+
+```js
+const xhr = new XMLHttpRequest();
+xhr.open('GET', '/api/data', false); // false => Synchronous
+xhr.send();
+```
+
+- 동기 처리는 `readyState`를 확인하여 `4`가 될 때까지 대기(메인 스레드 블로킹)
+- UI 멈춤
+- 요즘에는 안 쓴다...
+
+### 사용법
+
+기본적인 사용법은,
+
+1. `XMLHttpRequest` Obkect 생성
+2. `open`으로 HTTP method와 URL 설정
+3. `setRequestHeader`로 HTTP request header 설정(optional)
+4. `send`로 HTTP request 전송
+5. 이벤트 핸들러로 HTTP response 처리
+
+```js
+const xhr = new XMLHttpRequest();
+
+xhr.open('GET', '/api/data');
+xhr.send();
+```
+
+이 상태로는 response를 처리하지 않음
+
+#### `open()`
+
+- `open`은 HTTP method와 URL을 설정하는 메서드
+- request를 보내는 게 아니라 설정만 함
+- `open()` 시점에 `readyState`가 `1`이 됨
+
+#### `setRequestHeader()`
+
+- HTTP request header를 설정하는 메서드
+- `open()` 이후, `send()` 이전에 호출
+
+#### `send()`
+
+```js
+xhr.send(body);
+```
+
+- HTTP request를 보내는 메서드
+- 호출 시 `readyState`가 `2` -> `3` -> `4`
+- `body`는 HTTP request body
+
+#### response 처리
+
+##### `onreadystatechange`
+
+- `readyState`가 변경될 때마다 호출
+- `readyState`가 `4`가 될 때 response 처리
+
+```js
+xhr.onreadystatechange = function () {
+  if (xhr.readyState === 4) {
+    if (xhr.status === 200) {
+      console.log(xhr.responseText);
+    }
+  }
+};
+```
+
+##### `onload`
+
+- HTTP request가 성공적으로 완료된 경우 한 번만 호출
+- 네트워크 레벨에서 발생한 실패는 `onerror`로 핸들링
+
+```js
+xhr.onload = function () {
+  if (xhr.status >= 200 && xhr.status < 300) {
+    console.log(xhr.responseText);
+  } else {
+    console.error('HTTP error', xhr.status);
+  }
+};
+```
+
+##### `onerror`
+
+- DNS lookup 실패, 연결 실패, CORS 등의 네트워크 레벨에서 발생한 실패
+- 404, 500 등의 HTTP 상태 코드는 `onload`에서 핸들링
+
+```js
+xhr.onerror = function () {
+  console.error('Network error');
+};
+```
+
+### 한계
+
+- 너무 옛날에 만들어짐
+  - Promise, Stream API, Service Worker가 없던 시절
+  - 그래서 State Machine, Event-based 구조, 전체 버퍼링 후 처리 구조
+- 이벤트 기반 구조라서
+  - 콜백 중첩
+  - 흐름 제어가 어렵고
+  - `try`, `catch` 사용 불가
+- `Promise` 미지원
+  - `async`, `await` 사용 불가
+- 스트림 처리 불가
+  - `responseText`를 누적하고, 완료 후 전체 데이터를 처리하는 구조라 대용량 데이처 처리가 비효율적
+  - 사실 내부 구현은 chunk 단위로 처리되지만
+  - 우리가 쓰는 API에 노출된 부분이 전체 response뿐이라 chunk를 직접 다룰 수 없음
+- Request/Response 객체 없음
+  - init setting과 execute가 명확히 분리되지 않음
+  - 요청 재사용이 어려움
+
+## 6. Fetch API
+
+`XHR`의 위 단점을 개선하기 위해 등장한 네트워크 API
+
+### 특징
+
+- Promise 기반
+- `async`, `await` 사용 가능
+- Request/Response 객체
+- 스트림 처리 가능
+
+### 기본 구조
+
+```js
+const res = await fetch('/api/data');
+const data = await res.json();
+```
+
+- `fetch()`는 `Promise`를 반환함
+- `Promise`는 `Response` 객체를 resolve함
+- 네트워크 요청에 대한 응답이 도착하면, Response 객체를 resolve하고, 그 안의 body를 다시 비동기로 읽는다
+
+### `Response` 객체
+
+`fetch()`가 반환하는 `Promise`가 resolve하는 객체
+
+#### 주요 프로퍼티
+
+| 프로퍼티 | 설명 |
+| -------- | ---- |
+| `ok` | HTTP 응답 상태가 200-299이면 `true`, 아니면 `false` |
+| `status` | HTTP 응답 상태 코드 |
+| `statusText` | HTTP 응답 상태 메시지 |
+| `headers` | HTTP 응답 헤더. `Headers` 객체를 반환 |
+| `body` | HTTP 응답 본문. `ReadableStream`을 반환 |
+| `url` | HTTP 응답 URL |
+
+#### 주요 메서드
+
+| 메서드 | 설명 |
+| -------- | ---- |
+| `json()` | HTTP 응답 본문을 JSON으로 파싱 |
+| `text()` | HTTP 응답 본문을 텍스트로 파싱 |
+| `blob()` | HTTP 응답 본문을 Blob으로 파싱 |
+| `arrayBuffer()` | HTTP 응답 본문을 ArrayBuffer로 파싱 |
+| `formData()` | HTTP 응답 본문을 FormData로 파싱 |
+
+- `body`는 한 번만 읽을 수 있음 -> stream 이라서
+
+### 사용법
+
+#### GET
+
+```js
+fetch('/api/data')
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+```
+또는
+
+```js
+const res = await fetch('/api/data');
+const data = await res.json();
+console.log(data);
+```
+
+#### POST
+
+```js
+fetch('/api/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    id: 'sterdsterd',
+    password: 'password',
+  }),
+})
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+```
+
+#### 유의사항
+
+- `fetch`는 네트워크 에러만 `catch`로 잡음
+- 404, 500 등은 `catch`로 잡히지 않음
+그래서, 
+
+```js
+fetch('/api/data')
+  .then(res => {
+    if (!res.ok) {
+      throw new Error(res.status);
+    }
+    return res.json();
+  })
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+```
+와 같이 명시적으로 처리가 필요함
+
+### Request/Response 객체
+
+#### Request 객체
+
+```js
+const req = new Request('/api/data', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    id: 'sterdsterd',
+    password: 'password',
+  }),
+});
+```
+
+#### Response 객체
+
+```js
+const res = await fetch(req);
+```
+
+### AbortController
+
+```js
+const controller = new AbortController();
+const signal = controller.signal;
+
+fetch('/api/data', {
+  signal,
+})
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+
+controller.abort();
+```
+
+XHR의 `abort()`와 같이, Fetch API에서는 `AbortController`를 사용
+
+timeout은 `AbortController`로 구현 가능
+
+e.g.
+```js
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 5000);
+```
