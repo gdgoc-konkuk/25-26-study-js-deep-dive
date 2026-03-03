@@ -1,0 +1,429 @@
+# 번들러: Webpack과 Vite
+
+## 1. 모듈과 번들링의 배경
+
+초기 JavaScript에는 모듈 시스템이 없었다. 모든 코드를 `<script>` 태그로 불러왔고, 전역 스코프를 공유했다.
+
+```html
+<!-- 순서를 직접 관리해야 했다 -->
+<script src="jquery.js"></script>
+<script src="utils.js"></script>
+<script src="app.js"></script>
+```
+
+이 방식은 두 가지 치명적인 문제를 안고 있었다.
+
+1. 전역 스코프 오염: 모든 변수가 전역에 노출되어 이름 충돌이 발생한다.
+2. 의존성 관리 불가: 스크립트 로딩 순서를 개발자가 직접 관리해야 한다.
+
+이를 해결하기 위해 모듈 시스템이 발전했다.
+
+| 시기 | 모듈 시스템 | 특징 |
+| :--- | :--- | :--- |
+| 2009 | CommonJS (`require`) | Node.js 서버 환경용, 동기 로딩 |
+| 2015 | ES Modules (`import/export`) | 브라우저 표준, 정적 분석 가능 |
+
+ES Modules가 브라우저에서 동작하긴 하지만, 수백 개의 모듈을 개별 HTTP 요청으로 불러오면 네트워크 병목이 발생한다. 이 문제를 해결하는 도구가 바로 번들러(Bundler)다.
+
+```
+모듈 A ─┐
+모듈 B ─┼─ [번들러] ─→ bundle.js (하나 또는 몇 개의 파일)
+모듈 C ─┘
+```
+
+번들러는 진입점(Entry)부터 의존성 그래프를 분석하여, 여러 모듈을 하나(또는 몇 개)의 파일로 합쳐준다.
+
+## 2. Webpack 기초 개념
+
+Webpack은 JavaScript 애플리케이션을 위한 정적 모듈 번들러다. 모든 파일(JS, CSS, 이미지 등)을 모듈로 취급하고, 의존성 그래프를 만들어 번들링한다.
+
+### 핵심 5가지 개념
+
+| 개념 | 역할 | 설명 |
+| :--- | :--- | :--- |
+| Entry | 진입점 | 의존성 그래프의 시작점. 기본값은 `./src/index.js` |
+| Output | 출력 | 번들 결과물의 파일명과 경로 설정 |
+| Loaders | 변환기 | JS가 아닌 파일(CSS, 이미지 등)을 모듈로 변환 |
+| Plugins | 확장 | 번들 최적화, 환경 변수 주입 등 빌드 과정 전체에 개입 |
+| Mode | 모드 | `development` / `production` / `none` 환경별 최적화 |
+
+### 기본 설정 예제
+
+```javascript
+// webpack.config.js
+const path = require('path');
+
+module.exports = {
+  mode: 'production',
+  entry: './src/index.js',
+  output: {
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'dist'),
+  },
+  module: {
+    rules: [
+      {
+        test: /\.css$/,          // .css 파일을 만나면
+        use: ['style-loader', 'css-loader'], // 이 Loader들로 변환
+      },
+    ],
+  },
+  plugins: [
+    // HtmlWebpackPlugin 등
+  ],
+};
+```
+
+### Webpack 프로젝트 실행해보기
+
+```bash
+# 프로젝트 초기화
+pnpm init
+
+# Webpack 설치
+pnpm add -D webpack webpack-cli
+
+# 빌드 실행
+pnpm exec webpack
+```
+
+### 번들 결과물의 구조
+
+Webpack은 각 모듈을 함수로 감싸고, 자체적인 모듈 로딩 시스템(`__webpack_require__`)을 만든다. 번들 결과물의 핵심 구조는 다음과 같다.
+
+```javascript
+// dist/bundle.js (간략화)
+(() => {
+  // 모듈들을 객체로 관리
+  var __webpack_modules__ = {
+    './src/math.js': (module, exports) => {
+      exports.add = (a, b) => a + b;
+    },
+  };
+
+  // Webpack 자체 require 함수
+  function __webpack_require__(moduleId) {
+    var module = { exports: {} };
+    __webpack_modules__[moduleId](module, module.exports);
+    return module.exports;
+  }
+
+  // Entry Point 실행
+  const { add } = __webpack_require__('./src/math.js');
+  console.log(add(1, 2));
+})();
+```
+
+모든 모듈이 하나의 IIFE(즉시 실행 함수) 안에 들어간다. 브라우저가 이 파일 하나만 로드하면 애플리케이션이 실행된다.
+
+### Webpack의 한계
+
+Webpack은 강력하지만, 프로젝트 규모가 커지면 개발 서버 시작이 느려진다. 그 이유는 Webpack이 개발 모드에서도 모든 모듈을 번들링한 후 서버를 시작하기 때문이다.
+
+```
+[Webpack 개발 서버]
+전체 소스 ─→ 번들링(전체) ─→ 서버 시작 ─→ 브라우저 로드
+              ↑ 여기가 병목!
+```
+
+수천 개의 모듈이 있는 프로젝트에서는 콜드 스타트에 수십 초가 걸리기도 한다. 파일 하나를 수정해도 관련 모듈을 다시 번들링해야 하므로 HMR(Hot Module Replacement)도 느려진다.
+
+## 3. Vite가 등장한 이유
+
+Evan You(Vue.js 창시자)는 Vue 프로젝트가 커질수록 Webpack 기반 개발 서버의 느려짐을 체감했다. 핵심 병목은 두 가지였다.
+
+1. 콜드 스타트 문제: 개발 서버를 시작할 때 전체 애플리케이션을 번들링해야 한다. 프로젝트 규모에 비례해서 시작 시간이 늘어난다.
+2. HMR 속도 저하: 파일 하나를 수정하면 해당 모듈이 포함된 번들을 다시 만들어야 한다. 프로젝트가 클수록 업데이트 반영이 느려진다.
+
+"개발할 때는 번들링 자체를 하지 않으면 어떨까?"라는 발상에서 Vite가 탄생했다. Vite는 프랑스어로 "빠르다"는 뜻이다.
+
+## 4. Vite 핵심 동작 원리
+
+Vite의 핵심 아이디어는 개발과 프로덕션을 분리하는 것이다.
+
+- 개발 서버: 번들링 없이 Native ESM을 활용
+- 프로덕션 빌드: Rollup 기반으로 최적화된 번들 생성
+
+### 4.1 개발 서버: Native ESM 기반
+
+Vite의 개발 서버는 브라우저가 네이티브로 지원하는 ES Modules를 그대로 활용한다. 번들링을 하지 않고, 브라우저가 모듈을 요청할 때 해당 파일만 변환하여 제공한다.
+
+```
+[Vite 개발 서버]
+브라우저: import './App.vue' 요청
+  ↓
+Vite 서버: App.vue를 JS로 변환하여 응답
+  ↓
+브라우저: App.vue 안의 import './Header.vue' 발견 → 다시 요청
+  ↓
+Vite 서버: Header.vue만 변환하여 응답
+```
+
+이 방식의 장점은 프로젝트 크기와 무관하게 서버가 즉시 시작된다는 것이다. 전체를 번들링할 필요가 없기 때문이다.
+
+```
+[Webpack]  앱 전체 번들링 ────────────→ 서버 시작 (느림)
+[Vite]     서버 즉시 시작 → 요청 시 변환 (빠름)
+```
+
+### 4.2 의존성 사전 번들링 (Pre-bundling)
+
+하지만 `node_modules`의 라이브러리는 다르게 처리해야 한다. React 같은 라이브러리는 내부에 수백 개의 모듈이 있어서, 이를 모두 개별 ESM 요청으로 처리하면 HTTP 요청이 폭발한다.
+
+Vite는 이 문제를 esbuild로 해결한다.
+
+```
+node_modules/react (수백 개 내부 모듈)
+  ↓ esbuild로 사전 번들링 (매우 빠름)
+.vite/deps/react.js (하나의 ESM 파일)
+```
+
+- esbuild는 Go 언어로 작성되어 JavaScript 기반 도구보다 10~100배 빠르다.
+- 사전 번들링은 최초 실행 시 한 번만 수행되고, 이후에는 캐시를 사용한다.
+- CommonJS 모듈도 ESM으로 변환해준다.
+
+### 4.3 HMR (Hot Module Replacement)
+
+Webpack의 HMR은 변경된 모듈이 포함된 번들 전체를 다시 만들어야 한다. 반면 Vite의 HMR은 ESM 기반이라 변경된 모듈 하나만 교체하면 된다.
+
+```
+[Webpack HMR] 파일 수정 → 관련 번들 재생성 → 브라우저 업데이트 (느림)
+[Vite HMR]    파일 수정 → 해당 모듈만 교체 → 브라우저 업데이트 (빠름)
+```
+
+Vite의 HMR 속도는 프로젝트 규모와 무관하게 일정하다. 모듈 1,000개짜리 프로젝트에서 파일 하나를 수정해도, 그 파일의 변환 시간만 걸린다.
+
+### 4.4 프로덕션 빌드: Rollup 기반
+
+개발 서버에서는 Native ESM을 쓰지만, 프로덕션에서는 여전히 번들링이 필요하다. 그 이유는 다음과 같다.
+
+- 네트워크 효율: 수백 개의 모듈을 개별 요청하면 HTTP/2에서도 비효율적이다.
+- 최적화: Tree Shaking, 코드 스플리팅, 압축 등의 최적화가 필요하다.
+
+Vite는 프로덕션 빌드에 Rollup을 사용한다. Rollup을 선택한 이유는 다음과 같다.
+
+1. 효율적인 Tree Shaking: AST 노드 수준의 세밀한 분석으로 미사용 코드를 정교하게 제거한다.
+2. 코드 스플리팅: 동적 `import()`를 기반으로 최적의 청크(chunk)를 생성한다.
+3. ESM 친화적: ES Modules를 기본 출력 형식으로 지원한다.
+
+### 4.5 Vite 프로젝트 시작하기
+
+```bash
+# 프로젝트 생성
+pnpm create vite my-app -- --template vanilla
+
+# 의존성 설치
+cd my-app
+pnpm install
+
+# 개발 서버 실행
+pnpm run dev
+
+# 프로덕션 빌드
+pnpm run build
+```
+
+### 4.6 vite.config.js 설정 예제
+
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  // 개발 서버 설정
+  server: {
+    port: 3000,
+    open: true, // 서버 시작 시 브라우저 자동 열기
+  },
+
+  // 빌드 설정
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      // Rollup 옵션 직접 설정 가능
+    },
+  },
+
+  // 플러그인
+  plugins: [
+    // 예: @vitejs/plugin-react, @vitejs/plugin-vue
+  ],
+
+  // 경로 별칭
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
+});
+```
+
+Webpack과 비교하면 설정이 간결하다. Vite는 합리적인 기본값(Sensible Defaults)을 제공하기 때문에, 대부분의 경우 최소한의 설정만으로 충분하다.
+
+## 5. Tree Shaking 원리와 번들러별 차이
+
+### Tree Shaking이란?
+
+Tree Shaking은 사용하지 않는 코드를 자동으로 제거하는 최적화 기법이다. 이름은 나무를 흔들어 죽은 잎사귀를 떨어뜨린다는 비유에서 왔다.
+
+```javascript
+// math.js
+export function add(a, b) { return a + b; }
+export function subtract(a, b) { return a - b; }
+export function multiply(a, b) { return a * b; }
+
+// app.js
+import { add } from './math.js';
+console.log(add(1, 2));
+```
+
+위 코드에서 `subtract`와 `multiply`는 어디에서도 사용되지 않는다. Tree Shaking은 이들을 최종 번들에서 제거하여 파일 크기를 줄인다.
+
+Tree Shaking이 가능한 이유는 ES Modules의 `import/export`가 정적(static)이기 때문이다. 코드를 실행하지 않고도 어떤 모듈이 사용되는지 분석할 수 있다.
+
+### Webpack의 Tree Shaking: 3단계 접근
+
+Webpack은 Tree Shaking을 세 단계로 수행한다.
+
+1단계 - 모듈 레벨 (`optimization.sideEffects`)
+
+`package.json`에 `"sideEffects": false`가 설정된 모듈 중, 사용되는 export가 하나도 없는 모듈 전체를 제거한다.
+
+```json
+// package.json
+{
+  "sideEffects": false
+}
+```
+
+2단계 - 내보내기 레벨 (`optimization.usedExports`)
+
+각 모듈에서 실제로 사용되는 export만 남기고, 미사용 export를 표시한다.
+
+```javascript
+// Webpack이 내부적으로 미사용 export를 표시
+/* unused harmony export subtract */
+/* unused harmony export multiply */
+```
+
+3단계 - 코드 레벨 (`optimization.minimize`)
+
+Terser나 SWC 같은 압축기(Minifier)가 미사용으로 표시된 코드를 실제로 삭제한다. Webpack 자체는 코드를 삭제하지 않고, 압축기에게 위임한다.
+
+Webpack은 실행 정확성을 우선한다. 부수 효과(Side Effect)가 있을 수 있는 코드는 안전하게 남겨두기 때문에, 최적화가 보수적인 편이다.
+
+### Rollup의 Tree Shaking: AST 노드 수준 분석
+
+Rollup(= Vite 프로덕션 빌드)은 AST(추상 구문 트리) 노드 수준에서 분석한다. 이는 Webpack보다 훨씬 세밀한 접근이다.
+
+```javascript
+// Rollup은 사용되지 않는 객체 속성까지 제거할 수 있다
+const config = {
+  debug: { verbose: true, logLevel: 'all' },
+  production: { minify: true, sourcemap: false },
+};
+
+console.log(config.production.minify);
+// → Rollup: debug 속성 전체를 제거 가능
+// → Webpack: config 객체를 통째로 유지
+```
+
+Rollup의 Tree Shaking 과정을 단계별로 보면 다음과 같다.
+
+1. 진입점부터 모듈을 로드하고, 최상위 AST를 순회한다.
+2. 각 AST 노드가 부수 효과를 가지는지 판단한다.
+3. 부수 효과가 있는 노드와 그 노드가 참조하는 변수, 속성들만 재귀적으로 포함한다.
+4. 포함되지 않은 노드는 최종 결과물에서 제거된다.
+
+이 방식은 맥락을 고려한(Context-aware) 분석이 가능하다. 예를 들어, 변수에 재할당이 일어나는지, 객체의 어떤 속성만 접근하는지까지 추적한다.
+
+### esbuild의 Tree Shaking: 빠른 속도의 비결
+
+esbuild(= Vite 의존성 사전 번들링)는 최상위 선언문(Top-level Statement) 단위로 Tree Shaking을 수행한다.
+
+1. 모듈을 최상위 선언문 단위로 파트(Part)로 분할한다.
+2. 각 파트에서 정의되는 변수와 사용되는 변수를 분석한다.
+3. 진입점에서 사용되는 파트부터 위에서 아래로 추적하며 살아있는 파트를 표시한다.
+4. 표시되지 않은 파트를 제거한다.
+
+이 방식은 Webpack처럼 모듈을 함수로 감싸지 않으면서도, Rollup만큼의 AST 노드 수준 분석 없이 빠른 속도를 달성한다.
+
+### Tree Shaking 비교 요약
+
+| 번들러 | 분석 단위 | 모듈 래핑 | 부수 효과 분석 | 특징 |
+| :--- | :--- | :--- | :--- | :--- |
+| Webpack | Export / 모듈 | O (함수로 래핑) | 맥락 무관 | 정확성 우선, 보수적 |
+| Rollup | AST 노드 | X | 맥락 고려 | 가장 세밀한 최적화 |
+| esbuild | 최상위 선언문 | X | 맥락 무관 | 속도 최우선 |
+
+### Tree Shaking 동작 확인 예제
+
+다음 코드에서 각 번들러가 어떻게 다르게 최적화하는지 확인해보자.
+
+```javascript
+// utils.js
+export function used() {
+  return 'I am used';
+}
+
+export function unused() {
+  return 'I am NOT used';
+}
+
+export const config = {
+  api: 'https://api.example.com',
+  debug: false,
+};
+```
+
+```javascript
+// main.js
+import { used, config } from './utils.js';
+
+console.log(used());
+console.log(config.api);
+```
+
+- Webpack: `unused` 함수를 제거한다. `config` 객체는 통째로 유지한다.
+- Rollup: `unused` 함수를 제거하고, `config.debug` 속성도 제거할 수 있다.
+- esbuild: `unused` 함수를 포함하는 선언문 파트를 제거한다.
+
+> 참고: Tree Shaking의 번들러별 상세 동작 원리는 [web-infra-dev 토론](https://github.com/orgs/web-infra-dev/discussions/29)에서 더 깊이 다룬다.
+
+## 6. Webpack vs Vite 비교
+
+### 비교 표
+
+| 항목 | Webpack | Vite |
+| :--- | :--- | :--- |
+| 개발 서버 방식 | Bundle-based (전체 번들링 후 서버 시작) | Native ESM (번들링 없이 즉시 시작) |
+| 콜드 스타트 속도 | 느림 (프로젝트 규모에 비례) | 빠름 (프로젝트 규모와 무관) |
+| HMR 속도 | 느림 (관련 번들 재생성 필요) | 빠름 (변경 모듈만 교체) |
+| 프로덕션 번들러 | Webpack 자체 | Rollup |
+| Tree Shaking | Export/모듈 레벨 (보수적) | AST 노드 레벨 (세밀함) |
+| 설정 복잡도 | 높음 (Loader, Plugin 직접 구성) | 낮음 (합리적 기본값 제공) |
+| 생태계/플러그인 | 가장 거대한 생태계 | 빠르게 성장 중, Rollup 플러그인 호환 |
+| 설정 파일 | `webpack.config.js` (CommonJS) | `vite.config.js` (ESM) |
+
+### 언제 무엇을 쓸까?
+
+Vite를 선택하는 경우:
+
+- 새로운 프로젝트를 시작할 때 (React, Vue, Svelte 등)
+- 빠른 개발 경험이 중요할 때
+- 간결한 설정을 원할 때
+
+Webpack을 선택하는 경우:
+
+- 기존 Webpack 기반 프로젝트를 유지보수할 때
+- 특수한 Webpack 플러그인에 의존하는 레거시 프로젝트
+- Module Federation 같은 Webpack 고유 기능이 필요할 때
+
+현재 새로운 프로젝트에서는 Vite가 사실상 표준이 되어가고 있다. React 공식 문서에서도 Vite를 권장하며, Vue, Svelte, SolidJS 등 대부분의 프레임워크가 Vite를 기본 빌드 도구로 채택하고 있다.
+
+## 추천 자료
+
+- [Webpack 공식 문서 - Concepts](https://webpack.js.org/concepts/)
+- [Vite 공식 문서 - Why Vite](https://vite.dev/guide/why.html)
+- [Webpack 튜토리얼 - 첫 번들 만들기](https://frontend-fundamentals.com/bundling/webpack-tutorial/make-first-bundle.html)
+- [번들러별 Tree Shaking 원리 비교](https://github.com/orgs/web-infra-dev/discussions/29)
