@@ -421,6 +421,118 @@ Webpack을 선택하는 경우:
 
 현재 새로운 프로젝트에서는 Vite가 사실상 표준이 되어가고 있다. React 공식 문서에서도 Vite를 권장하며, Vue, Svelte, SolidJS 등 대부분의 프레임워크가 Vite를 기본 빌드 도구로 채택하고 있다.
 
+## 과제: 퀴즈
+
+### 퀴즈 1
+
+번들러가 하는 일을 한 문장으로 설명하시오.
+
+<details>
+  <summary>정답 및 해설</summary>
+
+정답: 진입점(Entry)부터 의존성 그래프를 분석하여, 여러 모듈을 하나 또는 소수의 파일로 합쳐주는 도구다.
+
+해설:
+브라우저에서 수백 개의 모듈을 개별 HTTP 요청으로 불러오면 네트워크 병목이 발생합니다. 번들러는 모듈 간의 의존 관계를 파악한 뒤 하나의 파일(또는 몇 개의 청크)로 합쳐서 요청 수를 줄이고, Tree Shaking이나 코드 압축 같은 최적화도 수행합니다.
+
+[👉 관련 내용으로 이동: 1. 모듈과 번들링의 배경](#1-모듈과-번들링의-배경)
+
+</details>
+
+### 퀴즈 2
+
+Webpack의 핵심 개념 중 Entry, Loaders, Plugins의 역할을 각각 간단히 설명하시오.
+
+<details>
+  <summary>정답 및 해설</summary>
+
+정답:
+- Entry: 의존성 그래프의 시작점이 되는 파일을 지정한다.
+- Loaders: JS가 아닌 파일(CSS, 이미지 등)을 모듈로 변환한다.
+- Plugins: 번들 최적화, 환경 변수 주입 등 빌드 과정 전체에 개입한다.
+
+해설:
+Webpack은 기본적으로 JavaScript와 JSON만 이해합니다. `css-loader`나 `babel-loader` 같은 Loaders가 다른 파일 형식을 처리하고, `HtmlWebpackPlugin` 같은 Plugins가 빌드 결과물을 후처리합니다. Entry는 보통 `./src/index.js`를 기본값으로 사용합니다.
+
+[👉 관련 내용으로 이동: 2. Webpack 기초 개념](#2-webpack-기초-개념)
+
+</details>
+
+### 퀴즈 3
+
+Vite 개발 서버가 Webpack 개발 서버보다 빠르게 시작되는 이유는 무엇인가?
+
+<details>
+  <summary>정답 및 해설</summary>
+
+정답: Webpack은 서버 시작 전 전체 앱을 번들링하지만, Vite는 번들링 없이 서버를 즉시 시작하고 브라우저가 요청하는 모듈만 변환하기 때문이다.
+
+해설:
+Webpack은 개발 서버를 시작하기 전에 모든 모듈을 번들링해야 하므로, 프로젝트가 클수록 시작이 느려집니다. Vite는 Native ESM을 활용하여 번들링 과정 없이 서버를 바로 시작합니다. 브라우저가 `import`문으로 특정 모듈을 요청하면 그때 해당 파일만 변환하여 응답하므로, 프로젝트 규모와 무관하게 빠릅니다.
+
+[👉 관련 내용으로 이동: 4.1 개발 서버: Native ESM 기반](#41-개발-서버-native-esm-기반)
+
+</details>
+
+### 퀴즈 4
+
+Vite가 개발 서버에서는 번들링을 하지 않는데, 왜 프로덕션 빌드에서는 번들링을 하는가?
+
+<details>
+  <summary>정답 및 해설</summary>
+
+정답: 수백 개의 모듈을 개별 요청으로 로드하면 HTTP/2 환경에서도 비효율적이고, Tree Shaking이나 코드 압축 같은 최적화가 필요하기 때문이다.
+
+해설:
+개발 환경에서는 빠른 시작과 HMR이 중요하므로 Native ESM이 효과적입니다. 하지만 프로덕션에서는 사용자에게 전달되는 파일 크기와 요청 수를 최소화해야 합니다. 번들링을 통해 파일을 합치고, Tree Shaking으로 미사용 코드를 제거하고, 압축을 적용해야 최적의 성능을 얻을 수 있습니다. Vite는 이를 위해 Rollup을 사용합니다.
+
+[👉 관련 내용으로 이동: 4.4 프로덕션 빌드: Rollup 기반](#44-프로덕션-빌드-rollup-기반)
+
+</details>
+
+### 퀴즈 5
+
+Tree Shaking이 ES Modules에서만 가능한 이유는 무엇인가?
+
+<details>
+  <summary>정답 및 해설</summary>
+
+정답: ES Modules의 `import`/`export`는 정적(static)으로 선언되므로, 코드를 실행하지 않고도 어떤 모듈이 사용되는지 분석할 수 있기 때문이다.
+
+해설:
+CommonJS의 `require()`는 동적으로 호출할 수 있어서(`if` 문 안에서 조건부 `require` 등) 코드를 실행해보기 전에는 어떤 모듈이 필요한지 알 수 없습니다. 반면 ES Modules의 `import`는 항상 파일 최상위에 정적으로 선언되므로, 번들러가 빌드 시점에 의존성 그래프를 완전히 파악하고 미사용 코드를 안전하게 제거할 수 있습니다.
+
+[👉 관련 내용으로 이동: 5. Tree Shaking 원리와 번들러별 차이](#5-tree-shaking-원리와-번들러별-차이)
+
+</details>
+
+### 퀴즈 6
+
+다음 코드에서 Tree Shaking이 적용되면 최종 번들에 포함되지 않는 것은?
+
+```javascript
+// math.js
+export function add(a, b) { return a + b; }
+export function subtract(a, b) { return a - b; }
+export function multiply(a, b) { return a * b; }
+
+// app.js
+import { add } from './math.js';
+console.log(add(1, 2));
+```
+
+<details>
+  <summary>정답 및 해설</summary>
+
+정답: `subtract` 함수와 `multiply` 함수가 번들에서 제거된다.
+
+해설:
+`app.js`에서 `math.js`의 `add`만 import하고 있으므로, `subtract`와 `multiply`는 어디에서도 사용되지 않습니다. 번들러는 이를 감지하여 최종 결과물에서 제거합니다. 이것이 Tree Shaking의 기본 동작입니다. 참고로 Webpack은 export 레벨에서, Rollup은 AST 노드 레벨에서 더 세밀하게 분석하는 차이가 있습니다.
+
+[👉 관련 내용으로 이동: 5. Tree Shaking 원리와 번들러별 차이](#5-tree-shaking-원리와-번들러별-차이)
+
+</details>
+
 ## 추천 자료
 
 - [Webpack 공식 문서 - Concepts](https://webpack.js.org/concepts/)
