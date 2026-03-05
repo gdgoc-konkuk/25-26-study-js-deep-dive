@@ -1,0 +1,210 @@
+# 44장 REST API
+
+## 0. 옛날에는...
+
+- 웹은 태생이 문서 공유를 위한 것
+- 서버가 문서(HTML)을 제공
+- 하이퍼링크를 타고 다른 문서로 이동
+  정도였지만, 점점 웹이 커지고 발전하면서
+- 페이지 전체가 아닌 데이터만 주고받고 싶어짐
+- 하나의 서버를 여러 클라이언트(웹, 앱 등)가 공유
+- Ajax로 인해 데이터 중심 통신이 일반화됨
+  -> REST 등장
+
+## 1. REST API가 뭐에요?
+
+REST<sup>Representational State Transfer</sup>는
+HTTP를 기반으로 클라이언트가 서버의 리소스에 접근하는 방식을 규정한 아키텍처
+
+### Resource
+
+- 서버가 관리하는 대상(파일, 이미지, 문서, 데이터 등)
+- 명사(대상)로 표현
+- URI로 식별
+
+e.g.
+
+- `/users`
+- `/users/{userId}`
+- `/users/{userId}/posts`
+- `/users/{userId}/posts/{postId}`
+
+- URI로 어떤 리소스를 다루는지 예측 가능해야함
+
+### Representation
+
+- Resource 자체가 아닌 Resource를 표현한 데이터
+- JSON, XML, HTML 등
+
+동일한 Resource라도,
+
+- 요약
+- 상세
+- 필터링
+  등에 따라서 Representation은 다를 수 있음
+
+### State
+
+- Resource의 상태
+- 서버의 상태
+- 클라이언트의 상태
+
+서버가 클라이언트의 상태를 저장하지 않고, 요청마다 필요한 정보를 포함하도록 설계함(Stateless)
+
+## 2. REST의 Constraint
+
+아래 제약을 만족할 수록 RESTful에 가까워지고, 웹의 장점(확장성, 캐시, 독립성 등)을 최대화할 수 있음
+
+### 2.1 Client-Server Architecture
+
+- 클라이언트와 서버가 분리
+- 클라이언트는 서버에 대한 정보를 모름
+- 서버는 클라이언트에 대한 정보를 모름
+- 클라이언트는 서버에게 요청만 함
+- 서버는 클라이언트에게 응답만 함
+
+> 대충 클라이언트는 서버 내부 DB 구조를 알 필요 없고, API로만 통신하면 됨
+
+### 2.2 Stateless
+
+- 서버는 클라이언트의 상태를 저장하지 않음
+- 모든 요청은 처리에 필요한 모든 정보를 포함해야 함
+
+> 대충 로그인 정보, 토큰 등을 매번 요청에 포함해야 함
+
+### 2.3 Cacheable
+
+- 응답은 캐시 가능 여부를 명시할 수 있음
+- 클라이언트는 캐시된 응답을 재사용하여 성능 향상 가능
+
+### 2.4 Layered System
+
+- 클라이언트와 서버 사이에 여러 계층(프록시, CDN 등)을 둘 수 있음
+- 클라이언트는 자신이 속한 계층만 알면 됨(중간에 어디를 거치는 지 알 필요가 없음)
+
+### 2.5 Uniform Interface
+
+- 리소스는 URI로 식별
+- HTTP 메서드로 행위를 표현
+- 상태코드로 상태를 표현
+
+## 3. REST API 설계
+
+### 3.1 Resource Modeling
+
+- Resource는 명사(대상)으로 표현
+- Resource의 행위는 HTTP 메서드로 표현
+
+e.g.
+
+```http
+GET /users
+GET /users/{userId}
+POST /users
+PUT /users/{userId}
+DELETE /users/{userId}
+```
+
+### 3.2 HTTP 메서드
+
+- GET: 조회(멱등)
+- POST: 생성(멱등X)
+- PUT: 전체 수정(멱등)
+- DELETE: 삭제(멱등)
+- PATCH: 부분 수정(멱등X)
+
+멱등성?: 같은 요청을 여러번 보내도 결과가 동일
+
+- 네트워크 재시도, 중복 요청, Optimistic 구현 시 고려
+
+### 3.3 상태 코드
+
+- 200 OK: Resource 조회 성공
+- 201 Created: Resource 생성 성공
+- 204 No Content: Resource 삭제 성공
+- 400 Bad Request: 잘못된 요청
+- 401 Unauthorized: 인증되지 않은 요청
+- 403 Forbidden: 권한이 없는 요청
+- 404 Not Found: Resource를 찾을 수 없음
+- 500 Internal Server Error: 서버 오류
+
+자세한 건 [여기](https://developer.mozilla.org/ko/docs/Web/HTTP/Status) 참고
+
+위 상태 코드를 중심으로 분기 처리 필요하다!
+
+## 퀴즈
+
+<div style={{ border: '1px solid #ccc', padding: '1.25rem', borderRadius: '0.5rem', marginTop: '1rem' }}>
+<span style={{ fontSize: '1.5rem' }}>1</span>
+<br />
+다음 중 REST API에 대한 설명으로 가장 적절한 것은?
+
+A. REST는 특정 라이브러리(예: Express)에서 제공하는 API 규격이다.
+
+B. REST는 리소스를 URI로 식별하고, HTTP 메서드로 행위를 표현하는 아키텍처 스타일이다.
+
+C. REST API는 항상 XML로만 응답해야 한다.
+
+D. REST API는 서버가 클라이언트의 상태(세션)를 반드시 저장해야 한다.
+
+
+<details>
+<summary>
+정답 및 해설
+</summary>
+<div style={{ padding: '1rem' }}>
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 정답 </span>
+
+B
+
+---
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 해설 </span>
+
+REST는 특정 구현/프레임워크가 아니라 아키텍처 스타일이고, 핵심은 리소스(명사)를 URI로 식별하고 HTTP 메서드로 행위를 표현하는 것.
+
+</div>
+</details>
+</div>
+
+---
+
+<div style={{ border: '1px solid #ccc', padding: '1.25rem', borderRadius: '0.5rem', marginTop: '1rem' }}>
+<span style={{ fontSize: '1.5rem' }}>2</span>
+<br />
+다음 중 재시도를 걸었을 때 상대적으로 안전한 요청으로 가장 적절한 조합은?
+
+A. POST, PATCH
+
+B. GET, DELETE
+
+C. POST, PUT
+
+D. PATCH, POST
+
+
+<details>
+<summary>
+정답 및 해설
+</summary>
+<div style={{ padding: '1rem' }}>
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 정답 </span>
+
+B
+
+---
+
+<span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}> 해설 </span>
+
+- GET (Idempotent) : 여러 번 해도 조회 결과가 "요청 자체로 인해" 바뀌지 않음
+- DELETE (Idempotent) : 이미 삭제된 걸 또 삭제해도 최종 상태는 "삭제됨"으로 동일
+
+반면 POST는 보통 멱등이 아니어서 재시도 시 중복 생성 위험이 큼.
+
+PATCH는 "부분 수정"이라 멱등이 보장되지 않는 경우가 많아서 재시도에 신중해야 함.
+
+</div>
+</details>
+</div>
