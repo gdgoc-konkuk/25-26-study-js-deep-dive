@@ -1,0 +1,675 @@
+﻿# TanStack Query Deep Dive
+
+## TanStack Query란?
+
+[TanStack Query](https://tanstack.com/query/v5)는 **비동기 서버 상태 관리 라이브러리**
+
+React 애플리케이션에서 서버 데이터를 가져오고, 캐싱하고, 동기화하고, 업데이트하는 작업을 선언적으로 처리해주는 도구다
+
+즉, TanStack Query는 fetch/axios를 없애는 게 아니라, fetch/axios 위에 얹어 쓰는 서버 상태 관리 레이어다.
+
+> **왜 필요한가?**
+>
+> TanStack Query는 이 요청/응답 과정을 React 컴포넌트 안에서 **선언적으로** 다룰 수 있게 해준다!
+
+[공식 GitHub](https://github.com/tanstack/query) | [공식 문서](https://tanstack.com/query/v5/docs/overview)
+
+---
+
+## 1. 왜 TanStack Query인가?
+
+### 기존 데이터 페칭의 문제점
+
+React에서 `useEffect` + `useState`로 데이터를 가져오는 전통적인 패턴을 떠올려보자
+
+```jsx
+function TodoList() {
+  const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isCancelled = false; // 컴포넌트 언마운트 시 상태 업데이트 방지
+
+    fetch('/api/todos')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isCancelled) {
+          // 컴포넌트가 여전히 마운트되어 있을 때만 상태 업데이트
+          setData(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled) {
+          setError(err);
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true; // 클린업 함수
+    };
+  }, []);
+
+  // ...
+}
+```
+
+이 패턴의 문제점:
+
+- 로딩/에러/데이터 상태를 **매번 수동으로** 관리해야 함
+- **캐싱 전략이 없음** → 컴포넌트가 마운트될 때마다 매번 새로 요청
+- 같은 데이터를 여러 컴포넌트에서 요청하면 **중복 네트워크 요청** 발생
+- 클린업 함수에서 **race condition**을 직접 처리해야 함
+- 데이터 동기화(refetch, invalidation)를 위한 별도 로직 필요
+
+### TanStack Query의 해결
+
+```jsx
+function TodoList() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['todos'],
+    queryFn: () => fetch('/api/todos').then((res) => res.json()),
+  });
+
+  // 캐싱, 중복 제거, 재시도, 에러 처리가 자동으로 이루어짐!
+}
+```
+
+단 몇 줄로 캐싱, 중복 제거, 재시도, 에러 처리가 모두 자동으로 이루어진다
+
+---
+
+## 2. 서버 상태 vs 클라이언트 상태
+
+### Deep Dive 연결: 실행 컨텍스트와 상태의 소유권
+
+JavaScript Deep Dive에서 배운 **실행 컨텍스트**를 떠올려보자
+
+변수는 자신이 선언된 실행 컨텍스트(스코프)에 속한다. 마찬가지로, **상태에도 소유권**이 존재한다!
+
+| 구분       | 클라이언트 상태                  | 서버 상태                       |
+| ---------- | -------------------------------- | ------------------------------- |
+| **소유권** | 클라이언트(브라우저)             | 서버(원격)                      |
+| **예시**   | 모달 open/close, 테마, 폼 입력값 | 유저 목록, 게시글, 댓글         |
+| **동기화** | 필요 없음                        | 서버와 지속적 동기화 필요       |
+| **최신성** | 항상 최신                        | 시간이 지나면 stale해질 수 있음 |
+| **공유**   | 로컬 컴포넌트 내                 | 여러 클라이언트가 공유          |
+
+TanStack Query는 **서버 상태**를 관리하기 위한 도구다
+
+Redux, Zustand 같은 클라이언트 상태 관리 도구와는 **목적이 다르다!**
+
+TanStack Query는 서버 상태와 클라이언트 사이의 동기화 레이어 역할을 한다
+
+---
+
+## 3. useQuery와 Query Key
+
+### 3.1 useQuery의 기본 구조
+
+[useQuery 공식 레퍼런스](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery)
+
+useQuery는 options를 넣으면,
+서버 상태를 구독한 결과(현재 상태, 제어 함수 등)를 객체 형태로 반환하는 hook이다.
+
+`queryKey`를 기준으로 캐시된 데이터를 찾고,
+
+없거나 오래되었으면 `queryFn`을 실행해서 데이터를 가져온 뒤, 그 결과를 현재 컴포넌트에 맞는 형태로 반환
+
+```jsx
+const result = useQuery({
+  queryKey: ['todos'],
+  queryFn: fetchTodos,
+});
+```
+
+즉 구조를 단순화하면:
+
+- 입력(options): queryKey, queryFn, staleTime, enabled, select 같은 설정
+
+- 출력(result): data, error, isLoading, isFetching, refetch 같은 현재 상태와 액션
+
+### 3.2 useQuery의 실제 동작
+
+```jsx
+const {
+  data, // 성공 시 반환된 데이터
+  error, // 에러 객체
+  isLoading, // 첫 번째 로딩 (캐시 데이터 없음)
+  isFetching, // 백그라운드 refetch 포함한 모든 로딩
+  isError, // 에러 상태
+  isSuccess, // 성공 상태
+  refetch, // 수동 refetch 함수
+} = useQuery({
+  queryKey: ['todos'], // 캐시 키 (필수)
+  queryFn: fetchTodos, // 데이터 패칭 함수 (필수)
+  staleTime: 1000 * 60 * 5, // 5분간 fresh 상태 유지
+  gcTime: 1000 * 60 * 10, // 10분간 가비지 컬렉션 유예
+  retry: 3, // 실패 시 3번 재시도
+  enabled: true, // false면 자동 실행 안 함
+  select: (data) => data.items, // 데이터 변환
+  placeholderData: previousData, // 로딩 중 보여줄 임시 데이터
+});
+```
+
+이 코드는 내부적으로 대략 이런 흐름으로 동작한다.
+
+1. `queryKey`: ['todos']를 보고 같은 키의 캐시 엔트리가 있는지 찾는다.
+   Query Key는 최상위가 배열이어야 하며, 캐시 식별 기준이 된다.
+2. 캐시가 없거나, 있어도 refetch가 필요하면 `queryFn`을 실행한다. `queryFn`은 Promise를 반환하는 함수면 된다.
+3. 요청 진행 상황에 따라 `isLoading`, `isFetching`, `isError`, `isSuccess` 같은 값이 바뀐다.
+4. 응답이 오면 캐시에 저장하고, 필요하면 select로 가공한 뒤 현재 컴포넌트에 반환한다. select는 캐시된 원본 데이터를 바꾸는 게 아니라, 이 observer가 보는 결과값을 변환하는 데 쓰인다.
+5. 이후 같은 `queryKey`를 쓰는 다른 컴포넌트가 생기면, 같은 캐시를 재사용한다. Query Key는 캐시 관리의 핵심 기준이다. ￼
+
+> **`isLoading` vs `isFetching` 차이**
+>
+> 예를 들어 todos 목록을 이미 한 번 불러온 뒤, 사용자가 탭을 다시 클릭해서 데이터 재검증이 일어났다고 하자.
+>
+> isLoading: false -> 이미 보여줄 데이터가 캐시에 있음
+>
+> isFetching: true -> 하지만 최신 데이터를 받기 위해 백그라운드에서 다시 요청
+>
+> 즉,
+> `isLoading` : 캐시 데이터가 **아예 없을 때**의 로딩 (최초 로딩)
+>
+> `isFetching` : 캐시가 있든 없든 **백그라운드에서 데이터를 가져오는 중**인 상태
+>
+> → 사용자에게 로딩 스피너를 보여줄 때는 `isLoading`, 백그라운드 업데이트 표시에는 `isFetching`을 쓴다
+
+### 3.2 Query Key: 캐시의 핵심
+
+[Query Keys 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/query-keys)
+
+Query Key는 TanStack Query의 캐시 시스템에서 **고유 식별자** 역할을 한다
+
+공식 문서는 Query Key가 최상위 배열이어야 하며, 데이터에 대해 유일하고 JSON 직렬화 가능한 값이어야 한다고 설명한다.
+
+```jsx
+// 기본 키 (할 일 목록 전체)
+useQuery({ queryKey: ['todos'], queryFn: fetchTodos });
+
+// 변수를 포함한 키 — id가 바뀌면 자동으로 새 쿼리 실행 (특정 id의 todo 하나)
+useQuery({ queryKey: ['todo', id], queryFn: () => fetchTodo(id) });
+
+// 필터 조건을 포함한 키 (완료된 todo의 1페이지 목록)
+useQuery({
+  queryKey: ['todos', { status: 'done', page: 1 }],
+  queryFn: () => fetchTodos({ status: 'done', page: 1 }),
+});
+```
+
+즉 Query Key에는 queryFn이 의존하는 변수를 함께 넣어야 한다.
+
+그래야 id, page, filter가 바뀔 때 TanStack Query가 “이건 다른 데이터구나”라고 인식한다.
+
+#### Deep Dive 연결: 프로퍼티 키와 해시
+
+JavaScript Deep Dive 10장에서 **프로퍼티 키**는 객체의 값에 접근하기 위한 식별자였다
+
+TanStack Query의 Query Key도 마찬가지로 **캐시 저장소(일종의 Map 객체)에서 데이터에 접근하기 위한 식별자**!
+
+내부적으로 Query Key는 **결정론적 해싱(deterministic hashing)** 을 통해 문자열로 변환된다
+
+따라서 **객체 내 키의 순서는 무관하다:**
+
+```jsx
+// 아래 두 쿼리는 동일한 캐시 엔트리를 참조한다!
+useQuery({ queryKey: ['todos', { page: 1, status: 'done' }] });
+useQuery({ queryKey: ['todos', { status: 'done', page: 1 }] });
+```
+
+### 3.3 주요 옵션 상세
+
+#### `enabled` — 의존적 쿼리 (Dependent Queries)
+
+[Dependent Queries 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/dependent-queries)
+
+“이 query를 지금 실행할 준비가 되었는가”를 제어한다. false면 자동 실행되지 않는다.
+
+```jsx
+// userId가 존재할 때만 쿼리 실행
+const { data: user } = useQuery({
+  queryKey: ['user', userId],
+  queryFn: () => fetchUser(userId),
+});
+
+const { data: projects } = useQuery({
+  queryKey: ['projects', user?.id],
+  queryFn: () => fetchProjects(user.id),
+  enabled: !!user?.id, // user가 로드된 후에만 실행
+});
+```
+
+여기서는 user가 준비되기 전까지 projects 요청을 아예 보내지 않는다.
+
+즉 enabled는 “조건부 fetch 스위치”라고 이해하면 쉽다.
+
+#### `select` — 렌더링 최적화
+
+[Render Optimizations 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/render-optimizations)
+
+캐시에 저장된 원본 응답을 현재 컴포넌트가 필요로 하는 형태로 변환할 때 사용한다.
+
+select의 반환값이 이전과 같으면 리렌더링이 발생하지 않는다!
+
+즉, select를 통해 데이터 구독 범위를 좁힐 수 있다.
+
+```jsx
+// 캐시에는 전체 데이터가 저장되지만, 컴포넌트는 count만 구독
+const { data: todoCount } = useQuery({
+  queryKey: ['todos'],
+  queryFn: fetchTodos,
+  select: (data) => data.length, // length가 변할 때만 리렌더링!
+});
+```
+
+이 경우 캐시에는 전체 todo 배열이 들어간다.
+
+하지만, 컴포넌트는 length라는 숫자만 구독하기 때문에, todo 배열이 바뀌어도 length가 같으면 리렌더링이 발생하지 않는다.
+
+#### `placeholderData` — 이전 데이터 활용
+
+[Placeholder Query Data 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/placeholder-query-data)
+
+실제 데이터가 도착하기 전, 이 observer가 임시로 갖고 있다고 가정할 데이터라고 설명되어 있다.
+
+해당 데이터는 캐시에 **영구 저장**되지 않는다!
+
+```jsx
+// 페이지네이션에서 이전 페이지 데이터를 보여주며 깜빡임 방지
+const { data } = useQuery({
+  queryKey: ['todos', page],
+  queryFn: () => fetchTodos(page),
+  placeholderData: (previousData) => previousData,
+});
+```
+
+이 코드는 페이지가 바뀌었을 때 새 페이지 응답이 오기 전까지, 직전 페이지 데이터를 잠깐 보여주는 패턴이다.
+
+즉:
+
+- 실제 새 페이지 데이터는 아직 없음
+- 하지만 UI가 비지 않도록 이전 데이터를 임시 표시
+- 응답이 오면 진짜 새 데이터로 교체
+
+그래서 placeholderData는 “캐시 대체”가 아니라 **UI 전환을 부드럽게 만드는 임시 표시값**이라고 설명하는 편이 정확하다.
+
+## 4. 캐싱 전략: staleTime과 gcTime
+
+### 4.1 Query는 실제로 어떻게 움직이는가?
+
+[Caching 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/caching)
+
+Tanstack Query에서 하나의 query는 캐시 + observer + 상태 머신으로 구성되어 있다.
+
+```
+1. useQuery 실행
+2. queryKey 기준으로 캐시 조회
+3. 없으면 fetch → 캐시 저장
+4. 컴포넌트는 해당 query를 “구독”
+```
+
+**구독 이후의 상태 lifecycle**
+
+1. **fresh** : 데이터가 최신 상태. 새로운 마운트/window focus 시에도 refetch하지 않음
+2. **stale** : 데이터가 오래됨. 특정 트리거(컴포넌트 마운트, window focus, 네트워크 재연결)에서 백그라운드 refetch 발생
+3. **inactive** : 이 쿼리를 구독하는 컴포넌트가 없음. gcTime 타이머 시작
+4. **deleted** : gcTime이 지나면 캐시에서 완전히 제거
+
+### 4.2 staleTime vs gcTime
+
+```jsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5분 (기본값: 0)
+      gcTime: 1000 * 60 * 10, // 10분 (기본값: 5분)
+    },
+  },
+});
+```
+
+| 옵션        | 기본값 | 의미                                                         |
+| ----------- | ------ | ------------------------------------------------------------ |
+| `staleTime` | `0`    | 이 데이터를 언제까지 fresh로 볼 것인가(refetch 안 하는 시간) |
+| `gcTime`    | `5분`  | 아무도 안 쓰는 캐시(inactive 상태)를 언제 지울 것인가        |
+
+**실제 타임라인 예시**
+
+```
+t=0 fetch 완료 → fresh
+t=5분 → stale
+t=6분 → 컴포넌트 unmount → inactive
+t=16분 → GC → 캐시 삭제
+```
+
+**쉽게 헷갈리는 포인트**
+
+1. stale != 삭제
+2. gcTime은 아무도 안 쓰는 쿼리일 때만 의미가 있다.
+3. gcTime >= staleTime으로 설정하는 것이 일반적이다. 그래야 fresh 상태의 데이터가 GC에 의해 사라지는 일이 없도록!
+
+> **v4 → v5 변경점**
+>
+> v4에서는 `cacheTime`이라는 이름이었지만, v5에서 의미를 명확히 하기 위해 `gcTime`으로 변경되었다.
+> [마이그레이션 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/migrating-to-v5)
+
+### 4.3 Refetch는 언제 발생하는가?
+
+stale 상태인 쿼리는 다음 상황에서 자동으로 refetch된다:
+
+- **새로운 구독자** : 쿼리를 사용하는 새 컴포넌트가 마운트될 때
+- **윈도우 포커스** : `refetchOnWindowFocus` (기본값: `true`)
+- **네트워크 재연결** : `refetchOnReconnect` (기본값: `true`)
+- **인터벌** : `refetchInterval` 설정 시
+
+---
+
+## 5. Mutation: useMutation과 낙관적 업데이트
+
+### 5.1 useMutation이 하는 일
+
+[Mutations 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/mutations)
+
+`useQuery`가 데이터를 **읽는(GET)** 것이라면, `useMutation`은 데이터를 **생성/수정/삭제(POST, PUT, DELETE)** 하는 것
+
+```jsx
+const mutation = useMutation({
+  mutationFn: (newTodo) => {
+    return fetch('/api/todos', {
+      method: 'POST',
+      body: JSON.stringify(newTodo),
+      headers: { 'Content-Type': 'application/json' },
+    }).then((res) => res.json());
+  },
+  onSuccess: (data) => {
+    // 성공 시 todos 쿼리 무효화 → 자동 refetch
+    queryClient.invalidateQueries({ queryKey: ['todos'] });
+  },
+  onError: (error) => {
+    console.error('Todo 생성 실패:', error);
+  },
+});
+
+// 사용
+mutation.mutate({ text: '새로운 할 일' });
+```
+
+즉, 자동 실행되지 않고 `mutate` 함수를 통해 명시적으로 실행하는 패턴이다.
+
+### 5.2 Query Invalidation : 왜 onSuccess에서 invalidateQueries를 호출하는가?
+
+[Query Invalidation 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/query-invalidation)
+
+`invalidateQueries`는 특정 쿼리를 **stale 상태로 만들고**, 현재 활성화된 쿼리는 **백그라운드에서 refetch**한다
+
+즉, 서버 데이터가 변경되었으니 캐시된 데이터도 최신이 아니라 다시 가져오라고 표시하는 것
+
+Tanstack query는 서버 변경을 자동으로 추적하지는 않으니, 개발자가 명시적으로 알려줘야 한다.
+
+```jsx
+// 'todos'로 시작하는 모든 쿼리 무효화
+queryClient.invalidateQueries({ queryKey: ['todos'] });
+
+// 정확한 키만 무효화
+queryClient.invalidateQueries({ queryKey: ['todos'], exact: true });
+```
+
+### 5.3 낙관적 업데이트 (Optimistic Updates)
+
+[Optimistic Updates 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/optimistic-updates)
+
+서버 응답을 기다리지 않고 **UI를 먼저 업데이트**하는 패턴
+
+인스타그램 좋아요 버튼을 누르면 바로 하트가 채워지는 것과 같은 원리!
+
+즉, UX를 최적화하기 위한 패턴이다.
+
+```jsx
+useMutation({
+  mutationFn: updateTodo,
+
+  onMutate: async (newTodo, context) => {
+    // 1. 진행 중인 refetch 취소 (낙관적 업데이트를 덮어쓰지 않도록)
+    await context.client.cancelQueries({ queryKey: ['todos'] });
+
+    // 2. 이전 데이터 스냅샷 (롤백용)
+    const previousTodos = context.client.getQueryData(['todos']);
+
+    // 3. 캐시를 낙관적으로 업데이트
+    context.client.setQueryData(['todos'], (old) => [...old, newTodo]);
+
+    // 4. 스냅샷 반환 (onError에서 사용)
+    return { previousTodos };
+  },
+
+  onError: (err, newTodo, onMutateResult, context) => {
+    // 실패 시 스냅샷으로 롤백
+    context.client.setQueryData(['todos'], onMutateResult.previousTodos);
+  },
+
+  onSettled: (data, error, variables, onMutateResult, context) => {
+    // 성공/실패 무관하게 서버 데이터와 동기화
+    context.client.invalidateQueries({ queryKey: ['todos'] });
+  },
+});
+```
+
+#### Deep Dive 연결: try-catch-finally와 클로저
+
+이 패턴은 Deep Dive 47장에서 배운 **try-catch-finally** 구조와 유사하다:
+
+| JavaScript     | TanStack Query                       |
+| -------------- | ------------------------------------ |
+| `try` 블록     | `onMutate` (낙관적 업데이트 시도)    |
+| `catch` 블록   | `onError` (실패 시 롤백)             |
+| `finally` 블록 | `onSettled` (항상 실행, 서버 동기화) |
+
+또한 Deep Dive 24장의 **클로저**가 여기서 실전 활용된다:
+
+- `onMutate`에서 `previousTodos`를 캡처(스냅샷)
+- `onError`에서 `onMutateResult.previousTodos`로 접근하여 롤백
+
+> **이전 값을 기억하고 있다가 실패 시 복원한다** → 이것이 바로 클로저의 실전 활용!
+
+---
+
+## 6. 고급 패턴
+
+### 6.1 병렬 쿼리 (Parallel Queries)
+
+[Parallel Queries 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/parallel-queries)
+
+여러 query가 서로의 결과에 의존하지 않으면, TanStack Query는 각 useQuery를 독립적으로 실행한다.
+
+즉 같은 컴포넌트 안에 여러 useQuery를 선언하면, 가능한 경우 요청이 순차가 아니라 병렬로 진행된다.
+Query는 고유한 key와 Promise 기반 queryFn으로 선언되며, 애플리케이션 전체에서 공유되고 재사용된다.
+
+```jsx
+function Dashboard() {
+  const usersQuery = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  });
+
+  const teamsQuery = useQuery({
+    queryKey: ['teams'],
+    queryFn: fetchTeams,
+  });
+
+  const projectsQuery = useQuery({
+    queryKey: ['projects'],
+    queryFn: fetchProjects,
+  });
+
+  // 세 쿼리는 서로 독립적이므로 동시에 실행될 수 있다.
+}
+```
+
+이 패턴은 대시보드처럼 여러 위젯이 각자 다른 데이터를 필요로 할 때 자주 쓴다.
+반대로 어떤 쿼리가 다른 쿼리 결과를 필요로 한다면 병렬이 아니라 enabled를 써서 의존적으로 연결해야 한다.
+
+### 6.2 Suspense 통합
+
+[Suspense 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/suspense)
+
+TanStack Query v5는 Suspense 전용 훅인 `useSuspenseQuery`와 `useSuspenseQueries`를 제공한다.
+
+`useSuspenseQueries` 문서에 따르면 각 query의 data는 정의되어 있다고 가정할 수 있고, 대신 `enabled`와 `placeholderData` 같은 옵션은 사용할 수 없다.
+또한 v5 마이그레이션 가이드는 v5에서 훅 호출 방식이 객체 시그니처 하나로 정리되었다고 설명한다.
+
+```jsx
+import { useSuspenseQuery, useSuspenseQueries } from '@tanstack/react-query';
+
+// useSuspenseQuery :단일 Suspense 쿼리
+function TodoList() {
+  const { data } = useSuspenseQuery({
+    queryKey: ['todos'],
+    queryFn: fetchTodos,
+  });
+  // data는 항상 존재 (undefined가 아님!) — Suspense가 로딩을 처리
+  return (
+    <ul>
+      {data.map((todo) => (
+        <li key={todo.id}>{todo.text}</li>
+      ))}
+    </ul>
+  );
+}
+
+// useSuspenseQueries : 여러 Suspense 쿼리를 병렬로 실행
+const [usersQuery, teamsQuery, projectsQuery] = useSuspenseQueries({
+  queries: [
+    { queryKey: ['users'], queryFn: fetchUsers },
+    { queryKey: ['teams'], queryFn: fetchTeams },
+    { queryKey: ['projects'], queryFn: fetchProjects },
+  ],
+});
+```
+
+- 컴포넌트 내부에서 isLoading 분기를 직접 쓰지 않아도 된다.
+- 로딩 처리는 바깥의 `<Suspense fallback={...}>`가 맡는다.
+- 컴포넌트는 “데이터가 준비된 이후의 성공 상태”에 더 집중하게 된다.
+
+> 주의점
+> useSuspenseQueries는 모든 쿼리가 끝난 뒤에 컴포넌트가 다시 마운트되므로,
+> 로딩 도중 어떤 query가 stale해지면 다시 fetch될 수 있어 staleTime을 적절히 잡아야 한다.
+
+### 6.3 Prefetching
+
+[Prefetching 공식 가이드](https://tanstack.com/query/v5/docs/framework/react/guides/prefetching)
+
+라우터 이동이나 사용자 상호작용 전에
+
+즉, 사용자가 실제로 화면에 진입하기 전에 미리 데이터를 캐시에 넣어두는 전략이다.
+
+```jsx
+// 사용자가 버튼을 호버할 때 미리 데이터를 가져옴
+function ProjectList({ setActiveProject }) {
+  const queryClient = useQueryClient();
+
+  return (
+    <button
+      onMouseEnter={() => {
+        queryClient.prefetchQuery({
+          queryKey: ['project', projectId],
+          queryFn: () => fetchProject(projectId),
+        });
+      }}
+      onClick={() => setActiveProject(projectId)}
+    >
+      프로젝트 보기
+    </button>
+  );
+}
+```
+
+이 코드의 흐름은 단순하다.
+
+1. 사용자가 버튼 위에 마우스를 올림
+2. 아직 화면 전환은 안 했지만 데이터를 미리 요청
+3. 사용자가 실제로 클릭해 들어가면 이미 캐시에 데이터가 있어서 더 빠르게 보일 수 있음
+
+즉, prefetch는 데이터를 “지금 쓰기 위해” 가져오는 것이 아니라 곧 쓸 가능성이 높아서 미리 준비하는 것이다.
+
+> Prefetch도 사용자가 **실제로 필요하기 전에 미리 데이터를 가져오는** 최적화 전략
+
+### 6.4 QueryClient 설정
+
+[QueryClient 공식 레퍼런스](https://tanstack.com/query/v5/docs/reference/QueryClient)
+
+QueryClient는 TanStack Query의 전역 관리자다.
+
+query cache, mutation cache, 기본 옵션 등을 이 객체가 관리하고, QueryClientProvider를 통해 React 트리에 공급한다.
+
+```jsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 전역 기본값: 5분
+      gcTime: 1000 * 60 * 10,
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MyApp />
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+  );
+}
+```
+
+1. defaultOptions : 전역 기본 동작을 정하는 곳이다.
+
+- 예를 들어 프로젝트 전체에서 staleTime을 5분으로 잡고 싶다면 여기서 한 번 설정하면 된다.
+- useQuery는 query options를 받고, 이런 옵션은 개별 query 또는 전역 기본값으로 지정할 수 있다. ￼
+
+2. QueryClientProvider가 있어야 앱 어디서든 동일한 query cache를 공유할 수 있다.
+
+- 예제들 역시 공통적으로 QueryClient를 만들고 provider로 감싼 뒤 useQuery를 사용한다.
+- Devtools 패널 예제도 같은 구조를 사용한다. ￼
+
+ReactQueryDevtools는 개발 중에 다음을 눈으로 확인할 때 특히 유용하다.
+
+- 어떤 query가 active인지
+- fresh/stale 여부가 어떤지
+- 캐시에 데이터가 실제로 들어왔는지
+- refetch가 언제 발생했는지
+
+QueryClient는 TanStack Query의 전역 운영체제 같은 역할을 한다.
+
+---
+
+## 7. JavaScript Deep Dive 연결 포인트 정리
+
+TanStack Query를 학습하면서 Deep Dive에서 다룬 핵심 개념들이 실제로 어떻게 활용되는지 정리해보자
+
+| Deep Dive 챕터               | 핵심 개념                         | TanStack Query 연결                                   |
+| ---------------------------- | --------------------------------- | ----------------------------------------------------- |
+| 10장. 객체 리터럴            | 프로퍼티 키, 계산된 프로퍼티      | Query Key의 해싱과 구조적 비교                        |
+| 11장. 원시 값과 객체의 비교  | 참조 값 비교 vs 구조적 동등성     | Query Key는 `===`가 아닌 구조적 동등성으로 비교       |
+| 13장. 스코프                 | 렉시컬 스코프, 변수의 생명주기    | 쿼리의 생명주기 (fresh → stale → inactive → GC)       |
+| 24장. 클로저                 | 클로저와 상태 유지                | `onMutate`에서 이전 데이터를 캡처, `onError`에서 롤백 |
+| 38장. 브라우저의 렌더링 과정 | 요청/응답, HTTP, 리플로우         | useQuery의 자동 요청, invalidation과 리렌더링         |
+| 40장. 이벤트 핸들링          | 이벤트 전파, 옵저버 패턴          | Query Observer — 여러 컴포넌트가 하나의 쿼리를 구독   |
+| 45장. 프로미스               | Promise, async/await, 에러 핸들링 | queryFn의 Promise 기반 동작, retry, AbortController   |
+| 47장. 에러 처리              | try-catch-finally                 | onMutate/onError/onSettled 라이프사이클               |
+
+---
+
+## 8. 예시 문제
+
+## 참고 문서
+
+- [TanStack Query v5 공식 문서](https://tanstack.com/query/v5)
+- [TanStack Query 시작하기 (Quick Start)](https://tanstack.com/query/v5/docs/framework/react/quick-start)
